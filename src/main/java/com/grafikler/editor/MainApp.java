@@ -9,28 +9,27 @@ import java.util.Locale;
 public class MainApp extends PApplet {
 
     int mode = 1;
-    boolean vMode = false; // Pencere düzenleme modu
-    int hoverState = -1; // -1:Yok, 0:Sol, 1:Sağ, 2:Üst, 3:Alt, 4:SolÜst, 5:SağÜst, 6:SolAlt, 7:SağAlt
+    boolean vMode = false; 
+    int hoverState = -1; 
     int dragState = -1;
     String perfMsg = "";
 
-    // Ekran panelleri
     float pW = 550, pH = 480;
     float lX = 50, rX = 650, pY = 100;
 
-    // Görev 1 (Sabit)
+    // Görev 1
     float xwMin = -150, xwMax = 150, ywMin = -100, ywMax = 100;
     float xvMin = 50, xvMax = 430, yvMin = 30, yvMax = 290;
     float[][] testPoints = {{0,0}, {150,100}, {-150,-100}, {75,-50}, {-30,80}};
 
-    // Görev 2 Dünya ve Pencere
+    // Görev 2
     float w2XMin = -2, w2XMax = 12, w2YMin = -2, w2YMax = 12;
     float csXMin = 2, csXMax = 8, csYMin = 2, csYMax = 6;
     List<LineObj> lines = new ArrayList<>();
     boolean isDrawingLine = false;
     float tempX, tempY;
 
-    // Görev 3 Dünya ve Pencere
+    // Görev 3
     float w3XMin = -4, w3XMax = 14, w3YMin = -4, w3YMax = 14;
     float shXMin = 0, shXMax = 10, shYMin = 0, shYMax = 10;
     List<PolyObj> polys = new ArrayList<>();
@@ -53,7 +52,6 @@ public class MainApp extends PApplet {
         addPoly(0);
     }
 
-    // --- KOORDİNAT DÖNÜŞÜMLERİ --- 
     float w2sX(float wx, float vX, float vW, float wMin, float wMax) { return vX + (wx - wMin) * (vW / (wMax - wMin)); }
     float w2sY(float wy, float vY, float vH, float wMin, float wMax) { return vY + vH - (wy - wMin) * (vH / (wMax - wMin)); }
     float s2wX(float sx, float vX, float vW, float wMin, float wMax) { return wMin + (sx - vX) * ((wMax - wMin) / vW); }
@@ -68,7 +66,6 @@ public class MainApp extends PApplet {
     float getCurCMinY() { return mode==2 ? csYMin : shYMin; }
     float getCurCMaxY() { return mode==2 ? csYMax : shYMax; }
 
-    // --- SINIFLAR (C-S Çizgi ve S-H Poligon) ---
     class LineObj {
         float x1, y1, x2, y2, cx1, cy1, cx2, cy2;
         boolean done, accepted;
@@ -90,7 +87,6 @@ public class MainApp extends PApplet {
             cx1=x1; cy1=y1; cx2=x2; cy2=y2; done=false; accepted=false;
             while(!done) step();
         }
-        void reset() { cx1=x1; cy1=y1; cx2=x2; cy2=y2; done=false; accepted=false; log="Sıfırlandı."; c1=getCode(cx1,cy1); c2=getCode(cx2,cy2); }
         void step() {
             if(done) return;
             c1 = getCode(cx1, cy1); c2 = getCode(cx2, cy2);
@@ -116,8 +112,7 @@ public class MainApp extends PApplet {
             for(float[] p:pts) orig.add(new float[]{p[0],p[1]});
             curr.addAll(orig); calcInstant();
         }
-        void reset() { curr.clear(); curr.addAll(orig); step=0; log="Sıfırlandı."; }
-        void calcInstant() { reset(); while(step<=3) step(); }
+        void calcInstant() { curr.clear(); curr.addAll(orig); step=0; while(step<=3) step(); }
         boolean isInside(float[] p, int edge) {
             if(edge==0) return p[0]>=shXMin; if(edge==1) return p[0]<=shXMax;
             if(edge==2) return p[1]>=shYMin; return p[1]<=shYMax;
@@ -145,7 +140,7 @@ public class MainApp extends PApplet {
                 }
             }
             curr = nxt; step++;
-            log = "Adım " + step + " (Kenar " + (step-1) + ") tamamlandı.";
+            log = "Adım " + step + " tamamlandı.";
         }
         float getArea(List<float[]> pList) {
             if(pList.size()<3) return 0;
@@ -155,13 +150,9 @@ public class MainApp extends PApplet {
         }
     }
 
-    // --- MOUSE VE PENCERE SÜRÜKLEME --- 
     void checkHover(float mx, float my) {
         if (!vMode || mode == 1) { hoverState = -1; cursor(ARROW); return; }
-        float wx = s2wX(mx, lX, pW, getCurWMinX(), getCurWMaxX());
-        float wy = s2wY(my, pY, pH, getCurWMinY(), getCurWMaxY());
         float cxMin = getCurCMinX(), cxMax = getCurCMaxX(), cyMin = getCurCMinY(), cyMax = getCurCMaxY();
-        
         float sxMin = w2sX(cxMin, lX, pW, getCurWMinX(), getCurWMaxX());
         float sxMax = w2sX(cxMax, lX, pW, getCurWMinX(), getCurWMaxX());
         float syMax = w2sY(cyMin, pY, pH, getCurWMinY(), getCurWMaxY()); 
@@ -232,7 +223,6 @@ public class MainApp extends PApplet {
         }
     }
 
-    // --- TUŞ KONTROLLERİ VE TESTLER ---
     @Override
     public void keyPressed() {
         char k = Character.toUpperCase(key);
@@ -275,7 +265,7 @@ public class MainApp extends PApplet {
             LineObj l = new LineObj(random(w2XMin,w2XMax), random(w2YMin,w2YMax), random(w2XMin,w2XMax), random(w2YMin,w2YMax));
             if(l.accepted) acc++; else if(l.x1==l.cx1 && l.y1==l.cy1 && l.x2==l.cx2 && l.y2==l.cy2) rej++; else clip++;
         }
-        perfMsg = "[PERF] 1000 Çizgi Kırpıldı -> Süre: " + (millis()-t0) + " ms. (Kabul:"+acc+" Ret:"+rej+" Kırpılan:"+clip+")";
+        perfMsg = "[PERF] 1000 Çizgi -> Süre: " + (millis()-t0) + " ms (K:"+acc+" R:"+rej+" C:"+clip+")";
     }
     void runPerfSH() {
         long t0 = millis();
@@ -284,21 +274,17 @@ public class MainApp extends PApplet {
             for(int j=0; j<4; j++) rp.add(new float[]{random(w3XMin,w3XMax), random(w3YMin,w3YMax)});
             new PolyObj(rp);
         }
-        perfMsg = "[PERF] 1000 Rastgele Dörtgen Kırpıldı -> Süre: " + (millis()-t0) + " ms.";
+        perfMsg = "[PERF] 1000 Dörtgen -> Süre: " + (millis()-t0) + " ms.";
     }
 
-    // --- ÇİZİM DÖNGÜSÜ ---
     @Override
     public void draw() {
         background(25);
         drawHeader();
-
         if(mode==1) drawM1(); else if(mode==2) drawM2(); else drawM3();
-
         stroke(80); line(30, height-50, width-30, height-50);
         fill(200); textAlign(CENTER, BOTTOM); textSize(14);
-        text("[1-3] Mod  |  [V] Edit Modu  |  [Space] Animasyon Adımı  |  [R] Temizle\n" +
-             "[M2] A-F:Çizgi, P:Perf.Test  |  [M3] K:Konveks, U:Konkav, O:Perf.Test, Enter:Poligon Bitir", width/2f, height-15);
+        text("[1-3] Mod  |  [V] Edit Modu  |  [Space] Adım İlerle  |  [R] Sıfırla  |  [M2] A-F:Çizgi, P:Perf  |  [M3] K, U, O:Perf", width/2f, height-15);
     }
 
     private void drawHeader() {
@@ -309,23 +295,24 @@ public class MainApp extends PApplet {
                       mode==2 ? "2 (Cohen-Sutherland)" : "3 (Sutherland-Hodgman)";
         String vStr = (mode!=1 && vMode) ? " [V: PENCERE DÜZENLEME AÇIK]" : "";
         text("Mod: " + mStr + vStr + "   " + perfMsg, width/2f, 45);
-        stroke(80); line(30, 70, width-30, 70);
+        if(mode==1) {
+            fill(220);
+            text("Bu modda verilen 5 nokta, window koordinatlarından viewport piksel koordinatlarına dönüştürülür.", width/2f, 65);
+        }
+        stroke(80); line(30, 85, width-30, 85);
     }
 
     private float mapX(float xw) { return xvMin + (xw - xwMin) * ((xvMax - xvMin) / (xwMax - xwMin)); }
     private float mapY(float yw) { return yvMin + (ywMax - yw) * ((yvMax - yvMin) / (ywMax - ywMin)); }
 
     void drawM1() {
-        fill(220); textAlign(CENTER, TOP); textSize(14);
-        text("Bu modda verilen 5 nokta, window koordinatlarından viewport piksel koordinatlarına dönüştürülür.", width/2f, 75);
-
         float m1pH = 330;
         fill(35); stroke(80); rect(lX, pY, pW, m1pH, 5); rect(rX, pY, pW, m1pH, 5);
         fill(255); textAlign(CENTER, TOP); textSize(16);
         text("Dünya Koordinatları (Window)", lX+pW/2, pY-25);
         text("Piksel Koordinatları (Viewport)", rX+pW/2, pY-25);
 
-        float padX = 50, padY = 30;
+        float padX = 60, padY = 40;
         float vWMin = xwMin - padX, vWMax = xwMax + padX;
         float vHMin = ywMin - padY, vHMax = ywMax + padY;
 
@@ -337,10 +324,7 @@ public class MainApp extends PApplet {
              w2sX(xwMax, lX, pW, vWMin, vWMax), w2sY(ywMin, pY, m1pH, vHMin, vHMax));
         rectMode(CORNER);
 
-        float vSX = rX + xvMin;
-        float vSY = pY + yvMin;
-        float vW = xvMax - xvMin;
-        float vH = yvMax - yvMin;
+        float vSX = rX + xvMin, vSY = pY + yvMin, vW = xvMax - xvMin, vH = yvMax - yvMin;
         stroke(0,150,255); noFill(); strokeWeight(2); rect(vSX, vSY, vW, vH); strokeWeight(1);
         
         fill(0,150,255); textSize(12);
@@ -354,8 +338,7 @@ public class MainApp extends PApplet {
             fill(255,255,0); noStroke(); ellipse(pxW, pyW, 8, 8);
             fill(200); textAlign(LEFT, BOTTOM); text(String.format("W(%.0f, %.0f)",p[0],p[1]), pxW+5, pyW-5);
 
-            float pxV = rX + mapX(p[0]);
-            float pyV = pY + mapY(p[1]);
+            float pxV = rX + mapX(p[0]), pyV = pY + mapY(p[1]);
             fill(0,255,0); ellipse(pxV, pyV, 8, 8);
             fill(200); text(String.format("W(%.0f,%.0f) -> V(%.0f,%.0f)",p[0],p[1],mapX(p[0]),mapY(p[1])), pxV+5, pyV-5);
         }

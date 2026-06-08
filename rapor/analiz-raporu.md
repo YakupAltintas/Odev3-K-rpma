@@ -9,7 +9,7 @@ Bu ödevde, bilgisayar grafiklerinin en temel konularından olan koordinat siste
 - **Grafik Kütüphanesi:** Processing 3 (Ekrana çizim yapmak, şekiller oluşturmak ve arayüz etkileşimi için)
 
 ## 3. Görev 1 - Koordinat Dönüşümü ve Y-Flip
-İlk görevde matematiksel dünyadaki (Window) noktaları, ekrandaki piksellere (Viewport) dönüştürdük.
+İlk görevde matematiksel dünyadaki (Window) noktaları, ekrandaki piksellere (Viewport) dönüştürdük. (Not: Bu görev arayüzde sabit bir doğrulama ekranı olarak tasarlanmıştır; kullanıcı müdahalesi gerektirmez, formüllerin doğruluğunu tablo halinde kanıtlar. V edit modu bu görevde kasten gizlenmiştir.)
 
 **Değerlerimiz:**
 - Window: X = [-150, 150], Y = [-100, 100]

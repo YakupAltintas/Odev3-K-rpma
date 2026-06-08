@@ -100,30 +100,60 @@ public class MainApp extends PApplet {
             if(animState == 2) { animSteps.add("AND testi yapıldı: " + getCodeStr(origC1&origC2)); animState++; return; }
             
             c1 = getCode(cx1, cy1); c2 = getCode(cx2, cy2);
+            
             if ((c1 | c2) == 0) {
                 done = true; accepted = true; 
-                animSteps.add("Karar: Trivial Accept (Kabul edildi)"); animSteps.add("Nihai sonuç çizildi."); return;
+                if(animState == 3) animSteps.add("Karar: Trivial Accept (Kabul edildi)");
+                animSteps.add("Nihai sonuç: İçeride."); 
+                return;
             }
             if ((c1 & c2) != 0) {
                 done = true; accepted = false; 
-                animSteps.add("Karar: Trivial Reject (Reddedildi)"); return;
+                if(animState == 3) animSteps.add("Karar: Trivial Reject (Reddedildi)");
+                animSteps.add("Nihai sonuç: Tamamen dışarıda.");
+                return;
             }
             if (animState == 3) { animSteps.add("Karar: Kısmi Kırpma. Kesişim aranıyor..."); animState++; return; }
 
+            // Hangi ucun dışarıda olduğunu bul
             int out = (c1 != 0) ? c1 : c2;
-            float ix=0, iy=0, dx=cx2-cx1, dy=cy2-cy1;
-            if(dx==0) dx=0.0001f; if(dy==0) dy=0.0001f;
+            float ix = 0, iy = 0;
+            float dx = cx2 - cx1;
+            float dy = cy2 - cy1;
             String kn = "";
-            if ((out & 8) != 0) { ix = cx1 + dx*(csYMax-cy1)/dy; iy = csYMax; kn="Üst"; }
-            else if ((out & 4) != 0) { ix = cx1 + dx*(csYMin-cy1)/dy; iy = csYMin; kn="Alt"; }
-            else if ((out & 2) != 0) { iy = cy1 + dy*(csXMax-cx1)/dx; ix = csXMax; kn="Sağ"; }
-            else if ((out & 1) != 0) { iy = cy1 + dy*(csXMin-cx1)/dx; ix = csXMin; kn="Sol"; }
+
+            // Formüller (Sıfıra bölünmeyi engelle)
+            if ((out & 8) != 0) { // Üst
+                ix = cx1 + (dx != 0 && dy != 0 ? dx * (csYMax - cy1) / dy : 0);
+                iy = csYMax;
+                kn = "Üst";
+            } else if ((out & 4) != 0) { // Alt
+                ix = cx1 + (dx != 0 && dy != 0 ? dx * (csYMin - cy1) / dy : 0);
+                iy = csYMin;
+                kn = "Alt";
+            } else if ((out & 2) != 0) { // Sağ
+                iy = cy1 + (dx != 0 && dy != 0 ? dy * (csXMax - cx1) / dx : 0);
+                ix = csXMax;
+                kn = "Sağ";
+            } else if ((out & 1) != 0) { // Sol
+                iy = cy1 + (dx != 0 && dy != 0 ? dy * (csXMin - cx1) / dx : 0);
+                ix = csXMin;
+                kn = "Sol";
+            }
             
             String iLog = String.format(Locale.US, "%s(%.1f, %.1f)", kn, ix, iy);
             intersectLogs.add(iLog);
             animSteps.add("Kesişim: " + iLog);
-            if (out == c1) { cx1=ix; cy1=iy; } else { cx2=ix; cy2=iy; }
-            c1 = getCode(cx1, cy1); c2 = getCode(cx2, cy2);
+            
+            // Sadece dışarıdaki ucu yenisiyle değiştir
+            if (out == c1) {
+                cx1 = ix; cy1 = iy;
+            } else {
+                cx2 = ix; cy2 = iy;
+            }
+            // Yeni nokta için kodu tekrar hesapla ki döngü bir sonraki adımda doğru devam etsin
+            c1 = getCode(cx1, cy1); 
+            c2 = getCode(cx2, cy2);
         }
     }
 

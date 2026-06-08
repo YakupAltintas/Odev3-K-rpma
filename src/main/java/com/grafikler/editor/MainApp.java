@@ -12,8 +12,8 @@ public class MainApp extends PApplet {
     private String modeName = "Koordinat Dönüşümü";
 
     // Ekran & Panel Düzeni Değerleri
-    float panelW = 550, panelH = 520;
-    float leftX = 60, rightX = 670, panelY = 120;
+    float panelW = 550, panelH = 480;
+    float leftX = 60, rightX = 670, panelY = 100;
 
     // Görev 1 Değerleri
     float xwMin = -150, xwMax = 150, ywMin = -100, ywMax = 100;
@@ -44,7 +44,8 @@ public class MainApp extends PApplet {
 
     @Override
     public void settings() {
-        size(1280, 800);
+        // Windows görev çubuğu altında kalmaması için yükseklik küçültüldü
+        size(1280, 720);
     }
 
     @Override
@@ -208,10 +209,10 @@ public class MainApp extends PApplet {
     }
 
     private void drawFooter() {
-        stroke(100); line(50, height - 80, width - 50, height - 80);
+        stroke(100); line(50, height - 50, width - 50, height - 50);
         fill(200); textAlign(CENTER, BOTTOM); textSize(14);
         String info = "[1] Görev 1 | [2] Görev 2 | [3] Görev 3  ---  [A-F / K-U] Test Seç  ---  [Space] Adım İlerle  ---  [R] Sıfırla";
-        text(info, width / 2f, height - 30);
+        text(info, width / 2f, height - 15);
     }
 
     // --- GÖREV 1 ARAYÜZÜ ---
@@ -288,7 +289,7 @@ public class MainApp extends PApplet {
         strokeWeight(1);
 
         // Sağ Panel Üst Yarı: Kırpılmış Görsel
-        float rpDrawH = 300;
+        float rpDrawH = 260;
         stroke(60); 
         for(int i=0; i<=10; i++) {
             line(mapWX(i, 0, 10, rightX, rightX+panelW), panelY, mapWX(i, 0, 10, rightX, rightX+panelW), panelY+rpDrawH);

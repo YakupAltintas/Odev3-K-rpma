@@ -46,6 +46,8 @@ public class MainApp extends PApplet {
     public void settings() {
         // Windows görev çubuğu altında kalmaması için yükseklik küçültüldü
         size(1280, 720);
+        // Grafikleri yumuşatmak ve piksellenmeyi (tırtıklı görünümü) önlemek için yüksek seviye anti-aliasing (8x MSAA)
+        smooth(8);
     }
 
     @Override

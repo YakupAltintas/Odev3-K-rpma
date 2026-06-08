@@ -1,0 +1,28 @@
+Görev 3: Sutherland-Hodgman Poligon Kırpma Analizi
+
+Pencere (Window): x=[0, 10], y=[0, 10]
+Başlangıç Poligonu: (-3, 5), (5, -3), (13, 5), (5, 13) (Pencereden dışarı taşan elmas şekli)
+
+Algoritma her bir kenar için 4 durumu (İç-İç, İç-Dış, Dış-Dış, Dış-İç) kontrol ederek yeni bir poligon listesi oluşturur.
+
+1. ADIM: SOL KENAR (x = 0)
+Sınır: x >= 0 iç bölgedir.
+- P1(-3, 5) -> P2(5, -3): Dışarıdan İçeriye. Kesişim noktası I1(0, 2) bulunur. I1 ve P2 listeye eklenir.
+- P2(5, -3) -> P3(13, 5): İçeriden İçeriye. Sadece P3 listeye eklenir.
+- P3(13, 5) -> P4(5, 13): İçeriden İçeriye. Sadece P4 listeye eklenir.
+- P4(5, 13) -> P1(-3, 5): İçeriden Dışarıya. Kesişim noktası I2(0, 8) bulunur ve listeye eklenir.
+* Sonuç Liste: (0, 2), (5, -3), (13, 5), (5, 13), (0, 8)
+
+2. ADIM: SAĞ KENAR (x = 10)
+Sınır: x <= 10 iç bölgedir.
+- Oluşan yeni liste üzerinde aynı işlemler uygulanır. x=10 doğrusunu aşan kısımlar kesilerek yeni (10, y) noktaları üretilir.
+
+3. ADIM: ALT KENAR (y = 0)
+Sınır: y >= 0 iç bölgedir.
+- y=0 ekseninin altında kalan (-3) gibi değerler kesilir ve (x, 0) noktaları üretilir.
+
+4. ADIM: ÜST KENAR (y = 10)
+Sınır: y <= 10 iç bölgedir.
+- y=10 ekseninin üstünde kalan (13) gibi değerler kesilerek son nihai poligon elde edilir.
+
+Tüm adımlar sonucunda poligon sadece [0,10] sınırları içerisinde kalacak şekilde sınırlandırılır ve her kesişim noktası arayüzde sarı ile gösterilerek görsel olarak ispatlanır.

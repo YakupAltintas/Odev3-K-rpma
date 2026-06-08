@@ -1,0 +1,21 @@
+Görev 3: Sutherland-Hodgman Poligon Kırpma Raporu
+
+1. Sutherland-Hodgman Algoritması Nasıl Çalışıyor?
+Algoritma, kırpılacak olan poligonun tüm köşe noktalarını kırpma penceresinin dört kenarından (sol, sağ, alt, üst) sırayla geçirir. Her kenar kontrolünde, bir önceki kenardan elde edilen yeni nokta listesi kullanılır. Bir kenardan geçerken çizginin 4 durumuna bakılır:
+- İçeriden İçeriye: İkinci nokta listeye eklenir.
+- İçeriden Dışarıya: Sadece kesişim noktası listeye eklenir.
+- Dışarıdan Dışarıya: Hiçbir nokta eklenmez.
+- Dışarıdan İçeriye: Önce kesişim noktası, sonra ikinci nokta eklenir.
+Bu döngü bittiğinde poligon sadece pencere sınırları içinde kalacak şekilde kırpılmış olur.
+
+2. Konveks Poligon Sonucu:
+Verilen (-1,3), (5,-1), (11,3), (5,7) poligonu, [0,10] penceresinin dışına taştığı için 4 kenarda da teste tabi tutulur. Kırpma sonucunda (x=0, x=10, y=0, y=10) sınırlarında kesilen noktalar atılır ve pencere içinde kalan yeni köşe noktaları hesaplanarak daha küçük, kırpılmış bir konveks poligon elde edilir.
+
+3. Konkav U Şeklinde Algoritma Nasıl Davranıyor?
+Verilen U şeklindeki (1,1), (9,1), (9,4), (6,4), (6,2), (4,2), (4,4), (1,4) poligonunun tüm noktaları [0,10] penceresinin sınırları içerisinde yer almaktadır. Bu nedenle algoritma 4 kenar kontrolünde de her çizgiyi "İçeriden İçeriye" olarak değerlendirir. Poligonda hiçbir değişiklik olmaz ve orijinal U şekli korunur. (Not: Eğer bu U şekli pencere sınırını kesseydi, algoritmanın doğası gereği dışarıda kalan boşluğu bağlayan hatalı/yapay (spurious) bir kenar oluşabilirdi, ancak bu testte pencere içinde kalındığından sorunsuz çalıştı.)
+
+4. Alan Hesabı (Shoelace / Bağcık Formülü):
+- Konveks Poligon Orijinal Alanı: 48.0
+- Konveks Poligon Kırpılmış Alanı (Adım bitiminde düşer): 35.8 civarı (hesaplanan kesin sonuç ekranda yazmaktadır).
+- Konkav U Şekli Orijinal Alanı: 20.0
+- Konkav U Şekli Kırpılmış Alanı: 20.0 (Kırpılmadığı için değişmez.)

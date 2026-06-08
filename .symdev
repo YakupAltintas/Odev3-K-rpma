@@ -1,0 +1,18 @@
+{
+  "project_id" : 2155,
+  "project_name" : "Odev3 Kırpma",
+  "language" : "JAVA",
+  "ai_chat_id" : "1PxrmEfyElkCTF9Dk3-tvfONjXIZtDPoR",
+  "active_llm_provider" : "gemini",
+  "ai_chat_sessions" : {
+    "gemini" : "1PxrmEfyElkCTF9Dk3-tvfONjXIZtDPoR"
+  },
+  "last_opened" : 1780927811685,
+  "symdev_account_email" : "yakupgoldstone@gmail.com",
+  "llm_account_email" : "yakupgoldstone@gmail.com",
+  "github_repo_url" : "https://github.com/YakupAltintas/Odev3-K-rpma.git",
+  "build_command" : "mvn clean package",
+  "run_command" : "java -Dfile.encoding=UTF-8 -jar target\\odev3-kirpma-1.0-SNAPSHOT.jar",
+  "open_browser_url" : null,
+  "arduino_board" : null
+}

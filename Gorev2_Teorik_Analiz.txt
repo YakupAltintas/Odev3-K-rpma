@@ -1,0 +1,46 @@
+Görev 2: Cohen-Sutherland Çizgi Kırpma Teorik Analizi
+
+Pencere (Window) Sınırları: X=[2, 8], Y=[2, 6]
+Bölge Kodlama Mantığı: Üst(1000), Alt(0100), Sağ(0010), Sol(0001)
+
+ÇİZGİ A: P1(2,2) -> P2(8,6)
+- P1 Kodu: 0000 (Pencere sınırı dahilinde)
+- P2 Kodu: 0000 (Pencere sınırı dahilinde)
+- OR Sonucu: 0000 | 0000 = 0000
+- AND Sonucu: 0000 & 0000 = 0000
+- Sonuç: KABUL (Trivial Accept). Çizgi tamamen pencere içerisindedir, kırpmaya gerek yoktur.
+
+ÇİZGİ B: P1(2,4) -> P2(8,4)
+- P1 Kodu: 0000
+- P2 Kodu: 0000
+- OR Sonucu: 0000
+- AND Sonucu: 0000
+- Sonuç: KABUL. Yatay çizgi tamamen içeridedir.
+
+ÇİZGİ C: P1(5,2) -> P2(5,10)
+- P1 Kodu: 0000 (İçeride)
+- P2 Kodu: 1000 (Üstte, y=10 > 6)
+- OR Sonucu: 1000
+- AND Sonucu: 0000
+- Sonuç: KIRPMA GEREKLİ. AND=0000 ama OR!=0000. Çizgi üst kenarla (y=6) kesiştirilir, dışta kalan üst parça atılır, kalanı kabul edilir.
+
+ÇİZGİ D: P1(1,1) -> P2(1,5)
+- P1 Kodu: 0101 (Alt ve Sol)
+- P2 Kodu: 0001 (Sol)
+- OR Sonucu: 0101 | 0001 = 0101
+- AND Sonucu: 0101 & 0001 = 0001
+- Sonuç: RET (Trivial Reject). AND != 0000 olduğundan, çizginin tamamı pencerenin solundadır. Hiçbir parçası görünmez.
+
+ÇİZGİ E: P1(0,0) -> P2(10,8)
+- P1 Kodu: 0101 (Alt ve Sol)
+- P2 Kodu: 1010 (Üst ve Sağ)
+- OR Sonucu: 1111
+- AND Sonucu: 0000
+- Sonuç: KIRPMA GEREKLİ. AND=0000 olduğu için çizgi pencere içinden geçebilir. Sırayla önce P1 bölgesi alt/sol kenarlarla, sonra P2 bölgesi üst/sağ kenarlarla kesiştirilerek kırpılır.
+
+ÇİZGİ F: P1(5,5) -> P2(5,5)
+- P1 Kodu: 0000
+- P2 Kodu: 0000
+- OR Sonucu: 0000
+- AND Sonucu: 0000
+- Sonuç: KABUL. Tek bir noktadan oluşan çizgi, pencere içindedir.

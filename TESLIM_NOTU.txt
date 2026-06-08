@@ -1,0 +1,17 @@
+BİLGİSAYAR GRAFİKLERİ - ÖDEV 3 TESLİM NOTU
+
+Bu proje, 2D Görüntüleme ve Kırpma Editörü (Görev 1, 2 ve 3) uygulamasını içermektedir.
+
+DOSYA YAPISI VE İÇERİKLER:
+- Kaynak kod 'src' klasöründedir.
+- Çalıştırılabilir jar (fat-jar) 'target' klasöründedir.
+- Analiz raporu 'rapor/analiz-raporu.md' klasöründedir.
+- Prompt günlüğü 'rapor/prompt-gunlugu.md' ekindedir.
+
+TEKNİK GEREKSİNİMLER:
+- Proje Java 17 ve Maven ile hazırlanmıştır.
+
+ÇALIŞTIRMA TALİMATI:
+Terminal veya komut satırından projenin bulunduğu dizinde şu komutu çalıştırarak uygulamayı açabilirsiniz (Türkçe karakter sorunu yaşamamak için UTF-8 bayrağı eklenmiştir):
+
+java -Dfile.encoding=UTF-8 -jar target/odev3-kirpma-1.0-SNAPSHOT.jar

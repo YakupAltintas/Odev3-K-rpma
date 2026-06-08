@@ -15,7 +15,7 @@ public class MainApp extends PApplet {
     String perfMsg = "";
 
     float pW = 500, pH = 480;
-    float lX = 50, rX = 600, pY = 100;
+    float lX = 50, rX = 600, pY = 90;
 
     // Görev 1
     float xwMin = -150, xwMax = 150, ywMin = -100, ywMax = 100;
@@ -325,31 +325,53 @@ public class MainApp extends PApplet {
         perfMsg = "[PERF] 1000 Dörtgen -> Süre: " + (millis()-t0) + " ms.";
     }
 
+    // --- MODERN ARAYÜZ (UI) ÇİZİMLERİ ---
+
     @Override
     public void draw() {
-        background(25);
-        drawHeader();
+        background(24, 24, 36);
         if(mode==1) drawM1(); else if(mode==2) drawM2(); else drawM3();
-        stroke(80); line(30, height-50, width-30, height-50);
-        fill(200); textAlign(CENTER, BOTTOM); textSize(14);
-        if(mode == 1) text("[2-3] Mod Değiştir", width/2f, height-15);
-        else if(mode == 2) text("[A-F] Test Çizgisi Seç  |  [Space] Adım İlerle  |  [V] Pencere Düzenle  |  [R] Sıfırla  |  [1-3] Mod Değiştir", width/2f, height-15);
-        else if(mode == 3) text("[K] Konveks  |  [U] Konkav  |  [Space] Adım İlerle  |  [V] Pencere Düzenle  |  [Enter] Çizim Bitir  |  [Backspace] Son Nokta Sil |  [1-3] Mod Değiştir", width/2f, height-15);
+        drawHeader();
+        drawFooter();
     }
 
     private void drawHeader() {
-        fill(255); textAlign(CENTER, TOP); textSize(24);
-        text("2D Görüntüleme ve Kırpma Editörü", width/2f, 15);
-        textSize(14); fill(180);
-        String mStr = mode==1 ? "Görev 1: Sabit window/viewport dönüşümü" :
-                      mode==2 ? "2 (Cohen-Sutherland)" : "3 (Sutherland-Hodgman)";
-        String vStr = (mode!=1 && vMode) ? " [V: PENCERE DÜZENLEME AÇIK]" : "";
-        text("Mod: " + mStr + vStr + "   " + perfMsg, width/2f, 45);
-        if(mode==1) {
-            fill(220);
-            text("Bu modda verilen 5 nokta, window koordinatlarından viewport piksel koordinatlarına dönüştürülür.", width/2f, 65);
+        noStroke();
+        fill(30, 32, 45, 240);
+        rect(0, 0, width, 70);
+        
+        fill(255); textAlign(LEFT, CENTER); textSize(24);
+        text("2D Görüntüleme ve Kırpma Editörü", 30, 35);
+        
+        String mStr = mode==1 ? "Görev 1: Koordinat Dönüşümü (Sabit)" :
+                      mode==2 ? "Görev 2: Cohen-Sutherland" : "Görev 3: Sutherland-Hodgman";
+        if(vMode && mode != 1) mStr += " [V: PENCERE DÜZENLEME AÇIK]";
+        
+        textSize(15);
+        float tw = textWidth(mStr) + 40;
+        fill(64, 169, 255, 40); stroke(64, 169, 255); strokeWeight(1);
+        rect(width/2f - tw/2f, 20, tw, 30, 15);
+        fill(200, 240, 255); textAlign(CENTER, CENTER); noStroke();
+        text(mStr, width/2f, 33);
+        
+        if(!perfMsg.isEmpty()) {
+            fill(76, 217, 100); textAlign(RIGHT, CENTER); textSize(14);
+            text(perfMsg, width - 30, 35);
         }
-        stroke(80); line(30, 85, width-30, 85);
+    }
+
+    private void drawFooter() {
+        noStroke();
+        fill(30, 32, 45, 240);
+        rect(0, height - 50, width, 50);
+        
+        fill(170, 175, 195); textAlign(CENTER, CENTER); textSize(14);
+        String txt = "";
+        if(mode == 1) txt = "[2, 3] Mod Değiştir";
+        else if(mode == 2) txt = "[A-F] Hazır Çizgi  |  [Fare] Çizgi Çiz  |  [Space] Adım İlerle  |  [V] Pencere Düzenle  |  [P] Performans Testi  |  [R] Temizle  |  [1-3] Mod Değiştir";
+        else if(mode == 3) txt = "[K] Konveks  |  [U] Konkav  |  [Fare] Çizim  |  [Enter] Bitir  |  [Backspace] Geri  |  [Space] Adım  |  [V] Pencere  |  [O] Perf.  |  [1-3] Mod";
+        
+        text(txt, width/2f, height - 26);
     }
 
     private float mapX(float xw) { return xvMin + (xw - xwMin) * ((xvMax - xvMin) / (xwMax - xwMin)); }
@@ -357,65 +379,67 @@ public class MainApp extends PApplet {
 
     void drawM1() {
         float m1pH = 330;
-        fill(35); stroke(80); rect(lX, pY, pW, m1pH, 5); rect(rX, pY, pW, m1pH, 5);
-        fill(255); textAlign(CENTER, TOP); textSize(16);
-        text("Dünya Koordinatları (Window)", lX+pW/2, pY-25);
-        text("Piksel Koordinatları (Viewport)", rX+pW/2, pY-25);
+        fill(34, 36, 54); stroke(54, 56, 76); strokeWeight(2); 
+        rect(lX, pY, pW, m1pH, 15); rect(rX, pY, pW, m1pH, 15);
+        
+        fill(240, 245, 255); textAlign(CENTER, TOP); textSize(17);
+        text("Dünya Koordinatları (Window)", lX+pW/2, pY+15);
+        text("Piksel Koordinatları (Viewport)", rX+pW/2, pY+15);
 
         float padX = 60, padY = 40;
         float vWMin = xwMin - padX, vWMax = xwMax + padX;
         float vHMin = ywMin - padY, vHMax = ywMax + padY;
 
         float ox = w2sX(0, lX, pW, vWMin, vWMax), oy = w2sY(0, pY, m1pH, vHMin, vHMax);
-        stroke(80); line(lX, oy, lX+pW, oy); line(ox, pY, ox, pY+m1pH);
+        stroke(80, 82, 100); strokeWeight(1); line(lX, oy, lX+pW, oy); line(ox, pY, ox, pY+m1pH);
 
-        stroke(200, 100, 100); noFill(); rectMode(CORNERS);
+        stroke(255, 69, 58); noFill(); strokeWeight(2); rectMode(CORNERS);
         rect(w2sX(xwMin, lX, pW, vWMin, vWMax), w2sY(ywMax, pY, m1pH, vHMin, vHMax),
              w2sX(xwMax, lX, pW, vWMin, vWMax), w2sY(ywMin, pY, m1pH, vHMin, vHMax));
         rectMode(CORNER);
 
         float vSX = rX + xvMin, vSY = pY + yvMin, vW = xvMax - xvMin, vH = yvMax - yvMin;
-        stroke(0,150,255); noFill(); strokeWeight(2); rect(vSX, vSY, vW, vH); strokeWeight(1);
+        stroke(64, 169, 255); noFill(); strokeWeight(2); rect(vSX, vSY, vW, vH, 8); strokeWeight(1);
         
-        fill(0,150,255); textSize(12);
-        textAlign(RIGHT, BOTTOM); text("(50,30)", vSX-5, vSY-5);
-        textAlign(LEFT, BOTTOM); text("(430,30)", vSX+vW+5, vSY-5);
-        textAlign(RIGHT, TOP); text("(50,290)", vSX-5, vSY+vH+5);
-        textAlign(LEFT, TOP); text("(430,290)", vSX+vW+5, vSY+vH+5);
+        fill(64, 169, 255); textSize(13);
+        textAlign(RIGHT, BOTTOM); text("(50,30)", vSX-8, vSY-8);
+        textAlign(LEFT, BOTTOM); text("(430,30)", vSX+vW+8, vSY-8);
+        textAlign(RIGHT, TOP); text("(50,290)", vSX-8, vSY+vH+8);
+        textAlign(LEFT, TOP); text("(430,290)", vSX+vW+8, vSY+vH+8);
 
         for(float[] p : testPoints) {
             float pxW = w2sX(p[0], lX, pW, vWMin, vWMax), pyW = w2sY(p[1], pY, m1pH, vHMin, vHMax);
-            fill(255,255,0); noStroke(); ellipse(pxW, pyW, 8, 8);
-            fill(200); textAlign(LEFT, BOTTOM); text(String.format("W(%.0f, %.0f)",p[0],p[1]), pxW+5, pyW-5);
+            fill(255, 204, 0); noStroke(); ellipse(pxW, pyW, 10, 10);
+            fill(240, 245, 255); textAlign(LEFT, BOTTOM); text(String.format("W(%.0f, %.0f)",p[0],p[1]), pxW+8, pyW-8);
 
             float pxV = rX + mapX(p[0]), pyV = pY + mapY(p[1]);
-            fill(0,255,0); ellipse(pxV, pyV, 8, 8);
-            fill(200); text(String.format("W(%.0f,%.0f) -> V(%.0f,%.0f)",p[0],p[1],mapX(p[0]),mapY(p[1])), pxV+5, pyV-5);
+            fill(76, 217, 100); ellipse(pxV, pyV, 10, 10);
+            fill(240, 245, 255); text(String.format("V(%.0f,%.0f)",mapX(p[0]),mapY(p[1])), pxV+8, pyV-8);
         }
 
-        fill(255,255,0); textAlign(CENTER, TOP); textSize(14);
-        float ty = pY + m1pH + 15;
-        text("mapX = 50 + (xw + 150) * 380 / 300   |   mapY = 290 - (yw + 100) * 260 / 200", width/2f, ty); ty += 20;
-        fill(200); text("mapY içinde Y-flip uygulanır çünkü Processing'de Y ekseni aşağı doğru artar.", width/2f, ty); ty += 30;
+        fill(255, 204, 0); textAlign(CENTER, TOP); textSize(15);
+        float ty = pY + m1pH + 25;
+        text("mapX = 50 + (xw + 150) * 380 / 300   |   mapY = 290 - (yw + 100) * 260 / 200", width/2f, ty); ty += 25;
+        fill(170, 175, 195); text("mapY içinde Y-flip uygulanır çünkü Processing'de Y ekseni aşağı doğru artar.", width/2f, ty); ty += 35;
         
-        fill(255);
-        text("Nokta W(x,y)      |      X_v Hesabı      |      Y_v Hesabı      |      Sonuç V(x,y)", width/2f, ty); ty += 20;
-        stroke(100); line(width/2f - 300, ty, width/2f + 300, ty); ty += 10;
-        fill(200);
+        fill(240, 245, 255);
+        text("Nokta W(x,y)         |         X_v Hesabı         |         Y_v Hesabı         |         Sonuç V(x,y)", width/2f, ty); ty += 22;
+        stroke(80, 82, 100); line(width/2f - 350, ty, width/2f + 350, ty); ty += 12;
+        fill(170, 175, 195);
         for(float[] p : testPoints) {
-            text(String.format("W(%.0f, %.0f)      |      %.0f      |      %.0f      |      V(%.0f, %.0f)", 
+            text(String.format("W(%.0f, %.0f)         |         %.0f         |         %.0f         |         V(%.0f, %.0f)", 
                 p[0], p[1], mapX(p[0]), mapY(p[1]), mapX(p[0]), mapY(p[1])), width/2f, ty);
-            ty += 20;
+            ty += 22;
         }
     }
 
     void drawClipWindow(float x, float wX, float wW) {
-        stroke(60); strokeWeight(1);
+        stroke(54, 56, 76); strokeWeight(1);
         for(int i=(int)getCurWMinX(); i<=(int)getCurWMaxX(); i+=2) {
-            line(w2sX(i, x, wW, getCurWMinX(), getCurWMaxX()), pY, w2sX(i, x, wW, getCurWMinX(), getCurWMaxX()), pY+pH);
-            line(x, w2sY(i, pY, pH, getCurWMinY(), getCurWMaxY()), x+wW, w2sY(i, pY, pH, getCurWMinY(), getCurWMaxY()));
+            line(w2sX(i, x, wW, getCurWMinX(), getCurWMaxX()), pY+1, w2sX(i, x, wW, getCurWMinX(), getCurWMaxX()), pY+pH-1);
+            line(x+1, w2sY(i, pY, pH, getCurWMinY(), getCurWMaxY()), x+wW-1, w2sY(i, pY, pH, getCurWMinY(), getCurWMaxY()));
         }
-        stroke(vMode ? color(255,150,0) : color(0,150,255)); noFill(); strokeWeight(vMode?3:2); rectMode(CORNERS);
+        stroke(vMode ? color(255, 204, 0) : color(64, 169, 255)); noFill(); strokeWeight(vMode?3:2); rectMode(CORNERS);
         float pxMin = w2sX(getCurCMinX(), x, wW, getCurWMinX(), getCurWMaxX());
         float pxMax = w2sX(getCurCMaxX(), x, wW, getCurWMinX(), getCurWMaxX());
         float pyMin = w2sY(getCurCMaxY(), pY, pH, getCurWMinY(), getCurWMaxY());
@@ -424,7 +448,7 @@ public class MainApp extends PApplet {
         rectMode(CORNER); strokeWeight(1);
 
         if(vMode && x==lX && hoverState!=-1) {
-            stroke(255,255,0); strokeWeight(5);
+            stroke(255, 69, 58); strokeWeight(5);
             if(hoverState==0||hoverState==4||hoverState==6) line(pxMin, pyMin, pxMin, pyMax);
             if(hoverState==1||hoverState==5||hoverState==7) line(pxMax, pyMin, pxMax, pyMax);
             if(hoverState==2||hoverState==4||hoverState==5) line(pxMin, pyMin, pxMax, pyMin);
@@ -434,129 +458,134 @@ public class MainApp extends PApplet {
     }
 
     void drawM2() {
-        fill(35); stroke(80); rect(lX, pY, pW, pH, 5); rect(rX, pY, pW, pH, 5);
-        fill(255); textAlign(CENTER, TOP); textSize(16);
-        text("Orijinal Çizgiler & Pencere", lX+pW/2, pY-25); text("Kırpılmış Sonuç & Cohen-Sutherland Analizi", rX+pW/2, pY-25);
+        fill(34, 36, 54); stroke(54, 56, 76); strokeWeight(2); 
+        rect(lX, pY, pW, pH, 15); rect(rX, pY, pW, pH, 15);
+        fill(240, 245, 255); textAlign(CENTER, TOP); textSize(17);
+        text("Orijinal Çizgiler & Pencere", lX+pW/2, pY+15); text("Kırpılmış Sonuç & Cohen-Sutherland Analizi", rX+pW/2, pY+15);
         drawClipWindow(lX, pW, pW); drawClipWindow(rX, pW, pW);
 
         LineObj al = lines.isEmpty() ? null : lines.get(lines.size()-1);
 
         for(LineObj l : lines) {
-            stroke(120); strokeWeight(2);
+            stroke(100, 105, 120); strokeWeight(2);
             line(w2sX(l.x1,lX,pW,w2XMin,w2XMax), w2sY(l.y1,pY,pH,w2YMin,w2YMax), w2sX(l.x2,lX,pW,w2XMin,w2XMax), w2sY(l.y2,pY,pH,w2YMin,w2YMax));
-            if(!l.done) stroke(255,165,0);
-            else if(l.accepted) stroke(0,255,0); else continue;
-            strokeWeight(3);
+            if(!l.done) stroke(255, 204, 0);
+            else if(l.accepted) stroke(76, 217, 100); else continue;
+            strokeWeight(4);
             line(w2sX(l.cx1,rX,pW,w2XMin,w2XMax), w2sY(l.cy1,pY,pH,w2YMin,w2YMax), w2sX(l.cx2,rX,pW,w2XMin,w2XMax), w2sY(l.cy2,pY,pH,w2YMin,w2YMax));
-            fill(255,255,0); noStroke();
-            ellipse(w2sX(l.cx1,rX,pW,w2XMin,w2XMax), w2sY(l.cy1,pY,pH,w2YMin,w2YMax), 8, 8);
-            ellipse(w2sX(l.cx2,rX,pW,w2XMin,w2XMax), w2sY(l.cy2,pY,pH,w2YMin,w2YMax), 8, 8);
+            fill(255, 204, 0); noStroke();
+            ellipse(w2sX(l.cx1,rX,pW,w2XMin,w2XMax), w2sY(l.cy1,pY,pH,w2YMin,w2YMax), 10, 10);
+            ellipse(w2sX(l.cx2,rX,pW,w2XMin,w2XMax), w2sY(l.cy2,pY,pH,w2YMin,w2YMax), 10, 10);
         }
 
         if(al != null && al.done && !al.accepted) {
-            fill(255, 0, 0); textAlign(CENTER, CENTER); textSize(32);
+            fill(255, 69, 58, 200); textAlign(CENTER, CENTER); textSize(36);
             text("REJECTED", rX + pW/2f, pY + pH/2f);
         }
 
         if(isDrawingLine) {
-            stroke(200); strokeWeight(2);
+            stroke(240, 245, 255); strokeWeight(2);
             line(w2sX(tempX,lX,pW,w2XMin,w2XMax), w2sY(tempY,pY,pH,w2YMin,w2YMax), mouseX, mouseY);
         }
 
-        fill(220); textAlign(LEFT, TOP); textSize(14);
         if(al != null) {
-            float ty = pY + 15;
+            float ty = pY + 50;
+            fill(240, 245, 255); textAlign(LEFT, TOP); textSize(14);
             String lName = currentLineIdx >= 0 && currentLineIdx < 6 ? String.valueOf((char)('A' + currentLineIdx)) : "Özel";
-            text("Seçili Çizgi: " + lName, rX+15, ty); ty += 20;
-            text(String.format(Locale.US, "Orijinal: P1(%.1f, %.1f) -> P2(%.1f, %.1f)", al.x1, al.y1, al.x2, al.y2), rX+15, ty); ty += 20;
-            text("P1 Code: " + al.getCodeStr(al.origC1), rX+15, ty); ty += 20;
-            text("P2 Code: " + al.getCodeStr(al.origC2), rX+15, ty); ty += 20;
-            text("OR = " + al.getCodeStr(al.origC1 | al.origC2), rX+15, ty); ty += 20;
-            text("AND = " + al.getCodeStr(al.origC1 & al.origC2), rX+15, ty); ty += 20;
             
-            String karar = (al.origC1 | al.origC2) == 0 ? "Trivial Accept"
-                         : (al.origC1 & al.origC2) != 0 ? "Trivial Reject"
-                         : "Kısmi Kırpma Gerekiyor";
-            text("Karar: " + karar, rX+15, ty); ty += 20;
+            fill(64, 169, 255, 40); stroke(64, 169, 255); strokeWeight(1);
+            rect(rX + 20, ty - 5, textWidth("Seçili Çizgi: " + lName) + 20, 26, 8);
+            fill(64, 169, 255); noStroke();
+            text("Seçili Çizgi: " + lName, rX+30, ty); ty += 35;
             
+            fill(170, 175, 195);
+            text(String.format(Locale.US, "Orijinal: P1(%.1f, %.1f) -> P2(%.1f, %.1f)", al.x1, al.y1, al.x2, al.y2), rX+20, ty); ty += 22;
+            text("P1 Code: " + al.getCodeStr(al.origC1) + "   |   P2 Code: " + al.getCodeStr(al.origC2), rX+20, ty); ty += 22;
+            text("OR = " + al.getCodeStr(al.origC1 | al.origC2) + "   |   AND = " + al.getCodeStr(al.origC1 & al.origC2), rX+20, ty); ty += 22;
+            
+            String karar = (al.origC1 | al.origC2) == 0 ? "Trivial Accept" : (al.origC1 & al.origC2) != 0 ? "Trivial Reject" : "Kısmi Kırpma Gerekiyor";
+            fill(255, 204, 0); text("Karar: " + karar, rX+20, ty); ty += 22;
+            
+            fill(170, 175, 195);
             String kes = al.intersectLogs.isEmpty() ? "Yok" : String.join(", ", al.intersectLogs);
-            text("Kesişim: " + kes, rX+15, ty); ty += 20;
+            text("Kesişim: " + kes, rX+20, ty); ty += 22;
             
             if(al.done) {
-                if(al.accepted) text(String.format(Locale.US, "Sonuç: (%.1f, %.1f) -> (%.1f, %.1f)", al.cx1, al.cy1, al.cx2, al.cy2), rX+15, ty);
-                else text("Sonuç: Çizgi dışarıda atıldı.", rX+15, ty);
+                fill(al.accepted ? color(76, 217, 100) : color(255, 69, 58));
+                if(al.accepted) text(String.format(Locale.US, "Sonuç: (%.1f, %.1f) -> (%.1f, %.1f)", al.cx1, al.cy1, al.cx2, al.cy2), rX+20, ty);
+                else text("Sonuç: Çizgi dışarıda atıldı.", rX+20, ty);
             } else {
-                text("Sonuç: Hesaplanıyor... (Space'e basın)", rX+15, ty);
+                fill(64, 169, 255); text("Sonuç: Hesaplanıyor... (Space'e basın)", rX+20, ty);
             }
 
-            ty += 30;
-            fill(255, 255, 0); text("Animasyon Adımları:", rX+15, ty); ty += 20;
-            fill(200); textSize(12);
-            for(String s : al.animSteps) { text("- " + s, rX+15, ty); ty += 18; }
+            ty += 40;
+            fill(240, 245, 255); textSize(15); text("Animasyon Adımları:", rX+20, ty); ty += 25;
+            fill(170, 175, 195); textSize(13);
+            for(String s : al.animSteps) { text("• " + s, rX+20, ty); ty += 20; }
         }
     }
 
     void drawM3() {
-        fill(35); stroke(80); rect(lX, pY, pW, pH, 5); 
-        rect(rX, pY, 350, pH, 5); // Orijinal panel boyutu
+        fill(34, 36, 54); stroke(54, 56, 76); strokeWeight(2); 
+        rect(lX, pY, pW, pH, 15); 
+        rect(rX, pY, 360, pH, 15); 
         
-        fill(255); textAlign(CENTER, TOP); textSize(16);
+        fill(240, 245, 255); textAlign(CENTER, TOP); textSize(17);
         String pTip = polyType==0 ? "Konveks" : polyType==1 ? "Konkav U" : "Özel";
-        text("Orijinal Poligonlar (Seçili: " + pTip + ")", lX+pW/2, pY-25);
-        text("Kırpılmış Sonuçlar", rX+350/2, pY-25);
+        text("Orijinal Poligon (" + pTip + ")", lX+pW/2, pY+15);
+        text("Kırpılmış Sonuçlar", rX+180, pY+15);
         
-        drawClipWindow(lX, pW, pW); drawClipWindow(rX, pW, 350);
+        drawClipWindow(lX, pW, pW); drawClipWindow(rX, pW, 360);
 
         for(PolyObj p : polys) {
-            stroke(150); strokeWeight(2); fill(150,150,150,80);
+            stroke(100, 105, 120); strokeWeight(2); fill(100, 105, 120, 60);
             beginShape(); for(float[] pt:p.orig) vertex(w2sX(pt[0],lX,pW,w3XMin,w3XMax), w2sY(pt[1],pY,pH,w3YMin,w3YMax)); endShape(CLOSE);
             
-            stroke(0,255,0); strokeWeight(3); fill(0,255,0,80);
-            beginShape(); for(float[] pt:p.curr) vertex(w2sX(pt[0],rX,350,w3XMin,w3XMax), w2sY(pt[1],pY,pH,w3YMin,w3YMax)); endShape(CLOSE);
+            stroke(76, 217, 100); strokeWeight(3); fill(76, 217, 100, 60);
+            beginShape(); for(float[] pt:p.curr) vertex(w2sX(pt[0],rX,360,w3XMin,w3XMax), w2sY(pt[1],pY,pH,w3YMin,w3YMax)); endShape(CLOSE);
             
-            fill(255,255,0); noStroke();
+            fill(255, 204, 0); noStroke();
             for(float[] pt:p.curr) {
-                float px = w2sX(pt[0],rX,350,w3XMin,w3XMax);
+                float px = w2sX(pt[0],rX,360,w3XMin,w3XMax);
                 float py = w2sY(pt[1],pY,pH,w3YMin,w3YMax);
-                ellipse(px, py, 8, 8);
-                // Kesişim etiketi (Sınır toleransı)
+                ellipse(px, py, 10, 10);
                 if(abs(pt[0]-shXMin)<0.1 || abs(pt[0]-shXMax)<0.1 || abs(pt[1]-shYMin)<0.1 || abs(pt[1]-shYMax)<0.1) {
-                    fill(255,255,0); textSize(10); textAlign(LEFT,BOTTOM); text("Kesişim", px+5, py-5);
+                    fill(255, 204, 0); textSize(11); textAlign(LEFT,BOTTOM); text("Kesişim", px+6, py-6);
                 }
             }
         }
 
         if(isDrawingPoly && customPoly.size()>0) {
-            stroke(200); strokeWeight(2); noFill();
+            stroke(240, 245, 255); strokeWeight(2); noFill();
             beginShape(); for(float[] pt:customPoly) vertex(w2sX(pt[0],lX,pW,w3XMin,w3XMax), w2sY(pt[1],pY,pH,w3YMin,w3YMax));
             vertex(mouseX, mouseY); endShape();
         }
 
         if(!polys.isEmpty()) {
             PolyObj ap = polys.get(polys.size()-1);
-            float oAlan = ap.getArea(ap.orig);
-            float kAlan = ap.getArea(ap.curr);
-            float fark = Math.abs(oAlan - kAlan);
+            float oAlan = ap.getArea(ap.orig), kAlan = ap.getArea(ap.curr), fark = Math.abs(oAlan - kAlan);
             
-            fill(255,255,0); textAlign(CENTER, TOP); textSize(14);
-            text("Sutherland-Hodgman Log: " + ap.log, width/2f, pY+pH+10);
+            fill(255, 204, 0); textAlign(CENTER, TOP); textSize(15);
+            text("Log: " + ap.log, width/2f, pY+pH+20);
             
-            fill(0,255,0);
-            text(String.format(Locale.US, "Orijinal Alan: %.1f   |   Kırpılmış Alan: %.1f   |   Alan Farkı: %.1f", oAlan, kAlan, fark), width/2f, pY+pH+30);
+            fill(76, 217, 100);
+            text(String.format(Locale.US, "Orijinal Alan: %.1f   |   Kırpılmış Alan: %.1f   |   Fark: %.1f", oAlan, kAlan, fark), width/2f, pY+pH+45);
 
             if(polyType == 1) {
-                fill(255, 100, 100); textSize(12);
-                text("Konkav poligonlarda Sutherland-Hodgman çalıştırılabilir, fakat köşe sırası ve topoloji yorumu dikkatli yapılmalıdır.", width/2f, pY+pH+50);
+                fill(255, 69, 58); textSize(13);
+                text("Uyarı: Konkav poligonlarda Sutherland-Hodgman'ın topoloji yorumu dikkatli yapılmalıdır.", width/2f, pY+pH+70);
             }
             
-            // Sağ panel dışı nokta listesi
-            fill(200); textAlign(LEFT, TOP); textSize(13);
-            float ty = pY+10;
-            float listX = rX + 350 + 20;
+            fill(240, 245, 255); textAlign(LEFT, TOP); textSize(14);
+            float ty = pY+50; float listX = rX + 360 + 30;
             text("Kırpılmış Noktalar:", listX, ty); ty+=25;
-            fill(0,255,0);
-            for(float[] pt:ap.curr) {
-                text(String.format(Locale.US, "(%.2f, %.2f)", pt[0], pt[1]), listX, ty); ty+=20;
+            fill(76, 217, 100); textSize(13);
+            int maxList = Math.min(ap.curr.size(), 14); 
+            for(int i=0; i<maxList; i++) {
+                text(String.format(Locale.US, "(%.2f, %.2f)", ap.curr.get(i)[0], ap.curr.get(i)[1]), listX, ty); ty+=22;
+            }
+            if(ap.curr.size() > maxList) {
+                fill(170, 175, 195); text("... + " + (ap.curr.size() - maxList) + " nokta daha", listX, ty);
             }
         }
     }

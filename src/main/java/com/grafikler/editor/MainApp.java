@@ -54,7 +54,6 @@ public class MainApp extends PApplet {
     }
 
     // --- KOORDİNAT DÖNÜŞÜMLERİ --- 
-    // (Ekran <-> Dünya - Matematiksel Y-Flip Dahil)
     float w2sX(float wx, float vX, float vW, float wMin, float wMax) { return vX + (wx - wMin) * (vW / (wMax - wMin)); }
     float w2sY(float wy, float vY, float vH, float wMin, float wMax) { return vY + vH - (wy - wMin) * (vH / (wMax - wMin)); }
     float s2wX(float sx, float vX, float vW, float wMin, float wMax) { return wMin + (sx - vX) * ((wMax - wMin) / vW); }
@@ -165,7 +164,7 @@ public class MainApp extends PApplet {
         
         float sxMin = w2sX(cxMin, lX, pW, getCurWMinX(), getCurWMaxX());
         float sxMax = w2sX(cxMax, lX, pW, getCurWMinX(), getCurWMaxX());
-        float syMax = w2sY(cyMin, pY, pH, getCurWMinY(), getCurWMaxY()); // Screen Y goes down
+        float syMax = w2sY(cyMin, pY, pH, getCurWMinY(), getCurWMaxY()); 
         float syMin = w2sY(cyMax, pY, pH, getCurWMinY(), getCurWMaxY());
         
         float tol = 15;
@@ -292,45 +291,89 @@ public class MainApp extends PApplet {
     @Override
     public void draw() {
         background(25);
-        fill(255); textAlign(CENTER, TOP); textSize(24);
-        text("2D Görüntüleme ve Kırpma Editörü", width/2f, 15);
-        textSize(14); fill(180);
-        text("Mod: " + (mode==1?"1 (Dönüşüm)":mode==2?"2 (Cohen-Sutherland)":"3 (Sutherland-Hodgman)") + 
-             (vMode?" [V: PENCERE DÜZENLEME AÇIK]":"") + "   " + perfMsg, width/2f, 45);
-        stroke(80); line(30, 70, width-30, 70);
+        drawHeader();
 
         if(mode==1) drawM1(); else if(mode==2) drawM2(); else drawM3();
 
-        stroke(80); line(30, height-60, width-30, height-60);
+        stroke(80); line(30, height-50, width-30, height-50);
         fill(200); textAlign(CENTER, BOTTOM); textSize(14);
         text("[1-3] Mod  |  [V] Edit Modu  |  [Space] Animasyon Adımı  |  [R] Temizle\n" +
              "[M2] A-F:Çizgi, P:Perf.Test  |  [M3] K:Konveks, U:Konkav, O:Perf.Test, Enter:Poligon Bitir", width/2f, height-15);
     }
 
+    private void drawHeader() {
+        fill(255); textAlign(CENTER, TOP); textSize(24);
+        text("2D Görüntüleme ve Kırpma Editörü", width/2f, 15);
+        textSize(14); fill(180);
+        String mStr = mode==1 ? "Görev 1: Sabit window/viewport dönüşümü" :
+                      mode==2 ? "2 (Cohen-Sutherland)" : "3 (Sutherland-Hodgman)";
+        String vStr = (mode!=1 && vMode) ? " [V: PENCERE DÜZENLEME AÇIK]" : "";
+        text("Mod: " + mStr + vStr + "   " + perfMsg, width/2f, 45);
+        stroke(80); line(30, 70, width-30, 70);
+    }
+
+    private float mapX(float xw) { return xvMin + (xw - xwMin) * ((xvMax - xvMin) / (xwMax - xwMin)); }
+    private float mapY(float yw) { return yvMin + (ywMax - yw) * ((yvMax - yvMin) / (ywMax - ywMin)); }
+
     void drawM1() {
-        fill(35); stroke(80); rect(lX, pY, pW, pH, 5); rect(rX, pY, pW, pH, 5);
+        fill(220); textAlign(CENTER, TOP); textSize(14);
+        text("Bu modda verilen 5 nokta, window koordinatlarından viewport piksel koordinatlarına dönüştürülür.", width/2f, 75);
+
+        float m1pH = 330;
+        fill(35); stroke(80); rect(lX, pY, pW, m1pH, 5); rect(rX, pY, pW, m1pH, 5);
         fill(255); textAlign(CENTER, TOP); textSize(16);
         text("Dünya Koordinatları (Window)", lX+pW/2, pY-25);
         text("Piksel Koordinatları (Viewport)", rX+pW/2, pY-25);
 
-        float ox = w2sX(0, lX, pW, xwMin, xwMax), oy = w2sY(0, pY, pH, ywMin, ywMax);
-        stroke(80); line(lX, oy, lX+pW, oy); line(ox, pY, ox, pY+pH);
+        float padX = 50, padY = 30;
+        float vWMin = xwMin - padX, vWMax = xwMax + padX;
+        float vHMin = ywMin - padY, vHMax = ywMax + padY;
 
-        float vSX = rX+xvMin, vSY = pY+yvMin, vW = xvMax-xvMin, vH = yvMax-yvMin;
+        float ox = w2sX(0, lX, pW, vWMin, vWMax), oy = w2sY(0, pY, m1pH, vHMin, vHMax);
+        stroke(80); line(lX, oy, lX+pW, oy); line(ox, pY, ox, pY+m1pH);
+
+        stroke(200, 100, 100); noFill(); rectMode(CORNERS);
+        rect(w2sX(xwMin, lX, pW, vWMin, vWMax), w2sY(ywMax, pY, m1pH, vHMin, vHMax),
+             w2sX(xwMax, lX, pW, vWMin, vWMax), w2sY(ywMin, pY, m1pH, vHMin, vHMax));
+        rectMode(CORNER);
+
+        float vSX = rX + xvMin;
+        float vSY = pY + yvMin;
+        float vW = xvMax - xvMin;
+        float vH = yvMax - yvMin;
         stroke(0,150,255); noFill(); strokeWeight(2); rect(vSX, vSY, vW, vH); strokeWeight(1);
+        
+        fill(0,150,255); textSize(12);
+        textAlign(RIGHT, BOTTOM); text("(50,30)", vSX-5, vSY-5);
+        textAlign(LEFT, BOTTOM); text("(430,30)", vSX+vW+5, vSY-5);
+        textAlign(RIGHT, TOP); text("(50,290)", vSX-5, vSY+vH+5);
+        textAlign(LEFT, TOP); text("(430,290)", vSX+vW+5, vSY+vH+5);
 
         for(float[] p : testPoints) {
-            float pxW = w2sX(p[0], lX, pW, xwMin, xwMax), pyW = w2sY(p[1], pY, pH, ywMin, ywMax);
+            float pxW = w2sX(p[0], lX, pW, vWMin, vWMax), pyW = w2sY(p[1], pY, m1pH, vHMin, vHMax);
             fill(255,255,0); noStroke(); ellipse(pxW, pyW, 8, 8);
             fill(200); textAlign(LEFT, BOTTOM); text(String.format("W(%.0f, %.0f)",p[0],p[1]), pxW+5, pyW-5);
 
-            float pxV = rX+xvMin+(p[0]-xwMin)*(vW/(xwMax-xwMin));
-            float pyV = pY+yvMin+(ywMax-p[1])*(vH/(ywMax-ywMin));
+            float pxV = rX + mapX(p[0]);
+            float pyV = pY + mapY(p[1]);
             fill(0,255,0); ellipse(pxV, pyV, 8, 8);
-            fill(200); text(String.format("V(%.0f, %.0f)",pxV-rX,pyV-pY), pxV+5, pyV-5);
+            fill(200); text(String.format("W(%.0f,%.0f) -> V(%.0f,%.0f)",p[0],p[1],mapX(p[0]),mapY(p[1])), pxV+5, pyV-5);
         }
-        fill(255,255,0); textAlign(CENTER, TOP);
-        text("Hesap: X_v = 50 + (X_w + 150)*1.266  |  Y_v = 30 + (100 - Y_w)*1.3 (Y-Flip)", width/2f, pY+pH+15);
+
+        fill(255,255,0); textAlign(CENTER, TOP); textSize(14);
+        float ty = pY + m1pH + 15;
+        text("mapX = 50 + (xw + 150) * 380 / 300   |   mapY = 290 - (yw + 100) * 260 / 200", width/2f, ty); ty += 20;
+        fill(200); text("mapY içinde Y-flip uygulanır çünkü Processing'de Y ekseni aşağı doğru artar.", width/2f, ty); ty += 30;
+        
+        fill(255);
+        text("Nokta W(x,y)      |      X_v Hesabı      |      Y_v Hesabı      |      Sonuç V(x,y)", width/2f, ty); ty += 20;
+        stroke(100); line(width/2f - 300, ty, width/2f + 300, ty); ty += 10;
+        fill(200);
+        for(float[] p : testPoints) {
+            text(String.format("W(%.0f, %.0f)      |      %.0f      |      %.0f      |      V(%.0f, %.0f)", 
+                p[0], p[1], mapX(p[0]), mapY(p[1]), mapX(p[0]), mapY(p[1])), width/2f, ty);
+            ty += 20;
+        }
     }
 
     void drawClipWindow(float x, float wX, float wW) {

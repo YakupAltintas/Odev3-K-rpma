@@ -402,10 +402,10 @@ public class MainApp extends PApplet {
         stroke(64, 169, 255); noFill(); strokeWeight(2); rect(vSX, vSY, vW, vH, 8); strokeWeight(1);
         
         fill(64, 169, 255); textSize(13);
-        textAlign(RIGHT, BOTTOM); text("(50,30)", vSX-8, vSY-8);
-        textAlign(LEFT, BOTTOM); text("(430,30)", vSX+vW+8, vSY-8);
-        textAlign(RIGHT, TOP); text("(50,290)", vSX-8, vSY+vH+8);
-        textAlign(LEFT, TOP); text("(430,290)", vSX+vW+8, vSY+vH+8);
+        textAlign(LEFT, TOP); text("(50,30)", vSX+6, vSY+6);
+        textAlign(RIGHT, TOP); text("(430,30)", vSX+vW-6, vSY+6);
+        textAlign(LEFT, BOTTOM); text("(50,290)", vSX+6, vSY+vH-6);
+        textAlign(RIGHT, BOTTOM); text("(430,290)", vSX+vW-6, vSY+vH-6);
 
         for(float[] p : testPoints) {
             float pxW = w2sX(p[0], lX, pW, vWMin, vWMax), pyW = w2sY(p[1], pY, m1pH, vHMin, vHMax);
@@ -414,7 +414,12 @@ public class MainApp extends PApplet {
 
             float pxV = rX + mapX(p[0]), pyV = pY + mapY(p[1]);
             fill(76, 217, 100); ellipse(pxV, pyV, 10, 10);
-            fill(240, 245, 255); text(String.format("V(%.0f,%.0f)",mapX(p[0]),mapY(p[1])), pxV+8, pyV-8);
+            fill(240, 245, 255); 
+            if(pxV > rX + pW - 80) {
+                textAlign(RIGHT, BOTTOM); text(String.format("V(%.0f,%.0f)",mapX(p[0]),mapY(p[1])), pxV-8, pyV-8);
+            } else {
+                textAlign(LEFT, BOTTOM); text(String.format("V(%.0f,%.0f)",mapX(p[0]),mapY(p[1])), pxV+8, pyV-8);
+            }
         }
 
         fill(255, 204, 0); textAlign(CENTER, TOP); textSize(15);
@@ -459,10 +464,14 @@ public class MainApp extends PApplet {
 
     void drawM2() {
         fill(34, 36, 54); stroke(54, 56, 76); strokeWeight(2); 
-        rect(lX, pY, pW, pH, 15); rect(rX, pY, pW, pH, 15);
+        rect(lX, pY, pW, pH, 15); 
+        rect(rX, pY, 360, pH, 15); // Sağ taraftaki çizim alanını daralt
         fill(240, 245, 255); textAlign(CENTER, TOP); textSize(17);
-        text("Orijinal Çizgiler & Pencere", lX+pW/2, pY+15); text("Kırpılmış Sonuç & Cohen-Sutherland Analizi", rX+pW/2, pY+15);
-        drawClipWindow(lX, pW, pW); drawClipWindow(rX, pW, pW);
+        text("Orijinal Çizgi & Pencere", lX+pW/2, pY+15); 
+        text("Kırpılmış Sonuç", rX+180, pY+15);
+        
+        drawClipWindow(lX, pW, pW); 
+        drawClipWindow(rX, pW, 360);
 
         LineObj al = lines.isEmpty() ? null : lines.get(lines.size()-1);
 
@@ -472,15 +481,15 @@ public class MainApp extends PApplet {
             if(!l.done) stroke(255, 204, 0);
             else if(l.accepted) stroke(76, 217, 100); else continue;
             strokeWeight(4);
-            line(w2sX(l.cx1,rX,pW,w2XMin,w2XMax), w2sY(l.cy1,pY,pH,w2YMin,w2YMax), w2sX(l.cx2,rX,pW,w2XMin,w2XMax), w2sY(l.cy2,pY,pH,w2YMin,w2YMax));
+            line(w2sX(l.cx1,rX,360,w2XMin,w2XMax), w2sY(l.cy1,pY,pH,w2YMin,w2YMax), w2sX(l.cx2,rX,360,w2XMin,w2XMax), w2sY(l.cy2,pY,pH,w2YMin,w2YMax));
             fill(255, 204, 0); noStroke();
-            ellipse(w2sX(l.cx1,rX,pW,w2XMin,w2XMax), w2sY(l.cy1,pY,pH,w2YMin,w2YMax), 10, 10);
-            ellipse(w2sX(l.cx2,rX,pW,w2XMin,w2XMax), w2sY(l.cy2,pY,pH,w2YMin,w2YMax), 10, 10);
+            ellipse(w2sX(l.cx1,rX,360,w2XMin,w2XMax), w2sY(l.cy1,pY,pH,w2YMin,w2YMax), 10, 10);
+            ellipse(w2sX(l.cx2,rX,360,w2XMin,w2XMax), w2sY(l.cy2,pY,pH,w2YMin,w2YMax), 10, 10);
         }
 
         if(al != null && al.done && !al.accepted) {
             fill(255, 69, 58, 200); textAlign(CENTER, CENTER); textSize(36);
-            text("REJECTED", rX + pW/2f, pY + pH/2f);
+            text("REJECTED", rX + 180, pY + pH/2f);
         }
 
         if(isDrawingLine) {
@@ -489,39 +498,40 @@ public class MainApp extends PApplet {
         }
 
         if(al != null) {
-            float ty = pY + 50;
+            float textX = rX + 360 + 20; // Analiz yazılarını çizimin yanına al
+            float ty = pY + 15;
             fill(240, 245, 255); textAlign(LEFT, TOP); textSize(14);
             String lName = currentLineIdx >= 0 && currentLineIdx < 6 ? String.valueOf((char)('A' + currentLineIdx)) : "Özel";
             
             fill(64, 169, 255, 40); stroke(64, 169, 255); strokeWeight(1);
-            rect(rX + 20, ty - 5, textWidth("Seçili Çizgi: " + lName) + 20, 26, 8);
+            rect(textX, ty - 5, textWidth("Seçili Çizgi: " + lName) + 20, 26, 8);
             fill(64, 169, 255); noStroke();
-            text("Seçili Çizgi: " + lName, rX+30, ty); ty += 35;
+            text("Seçili Çizgi: " + lName, textX + 10, ty); ty += 35;
             
             fill(170, 175, 195);
-            text(String.format(Locale.US, "Orijinal: P1(%.1f, %.1f) -> P2(%.1f, %.1f)", al.x1, al.y1, al.x2, al.y2), rX+20, ty); ty += 22;
-            text("P1 Code: " + al.getCodeStr(al.origC1) + "   |   P2 Code: " + al.getCodeStr(al.origC2), rX+20, ty); ty += 22;
-            text("OR = " + al.getCodeStr(al.origC1 | al.origC2) + "   |   AND = " + al.getCodeStr(al.origC1 & al.origC2), rX+20, ty); ty += 22;
+            text(String.format(Locale.US, "Orijinal: P1(%.1f, %.1f) -> P2(%.1f, %.1f)", al.x1, al.y1, al.x2, al.y2), textX, ty); ty += 22;
+            text("P1 Code: " + al.getCodeStr(al.origC1) + "   |   P2 Code: " + al.getCodeStr(al.origC2), textX, ty); ty += 22;
+            text("OR: " + al.getCodeStr(al.origC1 | al.origC2) + "   |   AND: " + al.getCodeStr(al.origC1 & al.origC2), textX, ty); ty += 22;
             
-            String karar = (al.origC1 | al.origC2) == 0 ? "Trivial Accept" : (al.origC1 & al.origC2) != 0 ? "Trivial Reject" : "Kısmi Kırpma Gerekiyor";
-            fill(255, 204, 0); text("Karar: " + karar, rX+20, ty); ty += 22;
+            String karar = (al.origC1 | al.origC2) == 0 ? "Trivial Accept" : (al.origC1 & al.origC2) != 0 ? "Trivial Reject" : "Kısmi Kırpma";
+            fill(255, 204, 0); text("Karar: " + karar, textX, ty); ty += 22;
             
             fill(170, 175, 195);
             String kes = al.intersectLogs.isEmpty() ? "Yok" : String.join(", ", al.intersectLogs);
-            text("Kesişim: " + kes, rX+20, ty); ty += 22;
+            text("Kesişim: " + kes, textX, ty); ty += 22;
             
             if(al.done) {
                 fill(al.accepted ? color(76, 217, 100) : color(255, 69, 58));
-                if(al.accepted) text(String.format(Locale.US, "Sonuç: (%.1f, %.1f) -> (%.1f, %.1f)", al.cx1, al.cy1, al.cx2, al.cy2), rX+20, ty);
-                else text("Sonuç: Çizgi dışarıda atıldı.", rX+20, ty);
+                if(al.accepted) text(String.format(Locale.US, "Sonuç: (%.1f, %.1f) -> (%.1f, %.1f)", al.cx1, al.cy1, al.cx2, al.cy2), textX, ty);
+                else text("Sonuç: Çizgi dışarıda atıldı.", textX, ty);
             } else {
-                fill(64, 169, 255); text("Sonuç: Hesaplanıyor... (Space'e basın)", rX+20, ty);
+                fill(64, 169, 255); text("Sonuç: Hesaplanıyor... (Space'e basın)", textX, ty);
             }
 
             ty += 40;
-            fill(240, 245, 255); textSize(15); text("Animasyon Adımları:", rX+20, ty); ty += 25;
+            fill(240, 245, 255); textSize(15); text("Animasyon Adımları:", textX, ty); ty += 25;
             fill(170, 175, 195); textSize(13);
-            for(String s : al.animSteps) { text("• " + s, rX+20, ty); ty += 20; }
+            for(String s : al.animSteps) { text("• " + s, textX, ty); ty += 20; }
         }
     }
 

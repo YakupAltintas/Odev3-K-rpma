@@ -28,6 +28,7 @@ public class MainApp extends PApplet {
     List<LineObj> lines = new ArrayList<>();
     boolean isDrawingLine = false;
     float tempX, tempY;
+    int currentLineIdx = 0;
 
     // Görev 3
     float w3XMin = -4, w3XMax = 14, w3YMin = -4, w3YMax = 14;
@@ -69,12 +70,20 @@ public class MainApp extends PApplet {
     class LineObj {
         float x1, y1, x2, y2, cx1, cy1, cx2, cy2;
         boolean done, accepted;
-        String log = "Bekliyor...";
-        int c1, c2;
-        LineObj(float x1, float y1, float x2, float y2) { 
+        int origC1, origC2, c1, c2, animState;
+        List<String> animSteps = new ArrayList<>();
+        List<String> intersectLogs = new ArrayList<>();
+
+        LineObj(float x1, float y1, float x2, float y2, boolean isInstant) { 
             this.x1=x1; this.y1=y1; this.x2=x2; this.y2=y2; 
-            this.cx1=x1; this.cy1=y1; this.cx2=x2; this.cy2=y2;
-            calcInstant();
+            init(); if(isInstant) calcInstant();
+        }
+        void init() {
+            cx1=x1; cy1=y1; cx2=x2; cy2=y2; 
+            origC1=getCode(x1,y1); origC2=getCode(x2,y2);
+            c1=origC1; c2=origC2; 
+            done=false; accepted=false; animState=0; 
+            animSteps.clear(); intersectLogs.clear();
         }
         int getCode(float x, float y) {
             int c = 0;
@@ -83,23 +92,36 @@ public class MainApp extends PApplet {
             return c;
         }
         String getCodeStr(int c) { return String.format("%4s", Integer.toBinaryString(c)).replace(' ', '0'); }
-        void calcInstant() {
-            cx1=x1; cy1=y1; cx2=x2; cy2=y2; done=false; accepted=false;
-            while(!done) step();
-        }
+        void calcInstant() { init(); while(!done) step(); }
         void step() {
             if(done) return;
+            if(animState == 0) { animSteps.add("Uç noktaların bölge kodları hesaplandı."); animState++; return; }
+            if(animState == 1) { animSteps.add("OR testi yapıldı: " + getCodeStr(origC1|origC2)); animState++; return; }
+            if(animState == 2) { animSteps.add("AND testi yapıldı: " + getCodeStr(origC1&origC2)); animState++; return; }
+            
             c1 = getCode(cx1, cy1); c2 = getCode(cx2, cy2);
-            String s1=getCodeStr(c1), s2=getCodeStr(c2);
-            if ((c1 | c2) == 0) { done = true; accepted = true; log="KABUL (P1:"+s1+" P2:"+s2+" OR:0000)"; return; }
-            if ((c1 & c2) != 0) { done = true; accepted = false; log="RET (P1:"+s1+" P2:"+s2+" AND:"+getCodeStr(c1&c2)+")"; return; }
+            if ((c1 | c2) == 0) {
+                done = true; accepted = true; 
+                animSteps.add("Karar: Trivial Accept (Kabul edildi)"); animSteps.add("Nihai sonuç çizildi."); return;
+            }
+            if ((c1 & c2) != 0) {
+                done = true; accepted = false; 
+                animSteps.add("Karar: Trivial Reject (Reddedildi)"); return;
+            }
+            if (animState == 3) { animSteps.add("Karar: Kısmi Kırpma. Kesişim aranıyor..."); animState++; return; }
+
             int out = (c1 != 0) ? c1 : c2;
             float ix=0, iy=0, dx=cx2-cx1, dy=cy2-cy1;
             if(dx==0) dx=0.0001f; if(dy==0) dy=0.0001f;
-            if ((out & 8) != 0) { ix = cx1 + dx*(csYMax-cy1)/dy; iy = csYMax; log="Üstten kesildi."; }
-            else if ((out & 4) != 0) { ix = cx1 + dx*(csYMin-cy1)/dy; iy = csYMin; log="Alttan kesildi."; }
-            else if ((out & 2) != 0) { iy = cy1 + dy*(csXMax-cx1)/dx; ix = csXMax; log="Sağdan kesildi."; }
-            else if ((out & 1) != 0) { iy = cy1 + dy*(csXMin-cx1)/dx; ix = csXMin; log="Soldan kesildi."; }
+            String kn = "";
+            if ((out & 8) != 0) { ix = cx1 + dx*(csYMax-cy1)/dy; iy = csYMax; kn="Üst"; }
+            else if ((out & 4) != 0) { ix = cx1 + dx*(csYMin-cy1)/dy; iy = csYMin; kn="Alt"; }
+            else if ((out & 2) != 0) { iy = cy1 + dy*(csXMax-cx1)/dx; ix = csXMax; kn="Sağ"; }
+            else if ((out & 1) != 0) { iy = cy1 + dy*(csXMin-cx1)/dx; ix = csXMin; kn="Sol"; }
+            
+            String iLog = String.format(Locale.US, "%s(%.1f, %.1f)", kn, ix, iy);
+            intersectLogs.add(iLog);
+            animSteps.add("Kesişim: " + iLog);
             if (out == c1) { cx1=ix; cy1=iy; } else { cx2=ix; cy2=iy; }
             c1 = getCode(cx1, cy1); c2 = getCode(cx2, cy2);
         }
@@ -237,8 +259,12 @@ public class MainApp extends PApplet {
             else if(mode==3 && !polys.isEmpty()) polys.get(polys.size()-1).step();
         }
         else if(mode==2) {
-            if(k=='A') addLine(2,2,8,6); else if(k=='B') addLine(2,4,8,4); else if(k=='C') addLine(5,2,5,10);
-            else if(k=='D') addLine(1,1,1,5); else if(k=='E') addLine(0,0,10,8); else if(k=='F') addLine(5,5,5,5);
+            if(k=='A') { currentLineIdx=0; addLine(2,2,8,6); } 
+            else if(k=='B') { currentLineIdx=1; addLine(2,4,8,4); }
+            else if(k=='C') { currentLineIdx=2; addLine(5,2,5,10); }
+            else if(k=='D') { currentLineIdx=3; addLine(1,1,1,5); }
+            else if(k=='E') { currentLineIdx=4; addLine(0,0,10,8); }
+            else if(k=='F') { currentLineIdx=5; addLine(5,5,5,5); }
             else if(k=='P') runPerfCS();
         }
         else if(mode==3) {
@@ -251,7 +277,7 @@ public class MainApp extends PApplet {
         }
     }
 
-    void addLine(float x1, float y1, float x2, float y2) { lines.add(new LineObj(x1,y1,x2,y2)); }
+    void addLine(float x1, float y1, float x2, float y2) { lines.add(new LineObj(x1,y1,x2,y2,false)); }
     void addPoly(int type) {
         List<float[]> p = new ArrayList<>();
         if(type==0) { p.add(new float[]{-1,3}); p.add(new float[]{5,-1}); p.add(new float[]{11,3}); p.add(new float[]{5,7}); }
@@ -262,7 +288,7 @@ public class MainApp extends PApplet {
     void runPerfCS() {
         long t0 = millis(); int acc=0, rej=0, clip=0;
         for(int i=0; i<1000; i++) {
-            LineObj l = new LineObj(random(w2XMin,w2XMax), random(w2YMin,w2YMax), random(w2XMin,w2XMax), random(w2YMin,w2YMax));
+            LineObj l = new LineObj(random(w2XMin,w2XMax), random(w2YMin,w2YMax), random(w2XMin,w2XMax), random(w2YMin,w2YMax), true);
             if(l.accepted) acc++; else if(l.x1==l.cx1 && l.y1==l.cy1 && l.x2==l.cx2 && l.y2==l.cy2) rej++; else clip++;
         }
         perfMsg = "[PERF] 1000 Çizgi -> Süre: " + (millis()-t0) + " ms (K:"+acc+" R:"+rej+" C:"+clip+")";
@@ -284,7 +310,7 @@ public class MainApp extends PApplet {
         if(mode==1) drawM1(); else if(mode==2) drawM2(); else drawM3();
         stroke(80); line(30, height-50, width-30, height-50);
         fill(200); textAlign(CENTER, BOTTOM); textSize(14);
-        text("[1-3] Mod  |  [V] Edit Modu  |  [Space] Adım İlerle  |  [R] Sıfırla  |  [M2] A-F:Çizgi, P:Perf  |  [M3] K, U, O:Perf", width/2f, height-15);
+        text("[A-F] Test Çizgisi Seç  |  [Space] Adım İlerle  |  [V] Pencere Düzenle  |  [R] Sıfırla  |  [1-3] Mod Değiştir", width/2f, height-15);
     }
 
     private void drawHeader() {

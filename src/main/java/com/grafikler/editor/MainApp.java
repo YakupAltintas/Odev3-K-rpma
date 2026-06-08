@@ -8,391 +8,413 @@ import java.util.Locale;
 
 public class MainApp extends PApplet {
 
-    private int mode = 1;
-    private String modeName = "Koordinat Dönüşümü";
+    int mode = 1;
+    boolean vMode = false; // Pencere düzenleme modu
+    int hoverState = -1; // -1:Yok, 0:Sol, 1:Sağ, 2:Üst, 3:Alt, 4:SolÜst, 5:SağÜst, 6:SolAlt, 7:SağAlt
+    int dragState = -1;
+    String perfMsg = "";
 
-    // Ekran & Panel Düzeni Değerleri
-    float panelW = 550, panelH = 480;
-    float leftX = 60, rightX = 670, panelY = 100;
+    // Ekran panelleri
+    float pW = 550, pH = 480;
+    float lX = 50, rX = 650, pY = 100;
 
-    // Görev 1 Değerleri
+    // Görev 1 (Sabit)
     float xwMin = -150, xwMax = 150, ywMin = -100, ywMax = 100;
     float xvMin = 50, xvMax = 430, yvMin = 30, yvMax = 290;
-    float[][] testPoints = {{0, 0}, {150, 100}, {-150, -100}, {75, -50}, {-30, 80}};
+    float[][] testPoints = {{0,0}, {150,100}, {-150,-100}, {75,-50}, {-30,80}};
 
-    // Görev 2 Değerleri
+    // Görev 2 Dünya ve Pencere
+    float w2XMin = -2, w2XMax = 12, w2YMin = -2, w2YMax = 12;
     float csXMin = 2, csXMax = 8, csYMin = 2, csYMax = 6;
-    float[][] testLines = {{2,2,8,6}, {2,4,8,4}, {5,2,5,10}, {1,1,1,5}, {0,0,10,8}, {5,5,5,5}};
-    char[] lineNames = {'A', 'B', 'C', 'D', 'E', 'F'};
-    int currentLineIdx = 0;
-    float lineX1, lineY1, lineX2, lineY2, curX1, curY1, curX2, curY2;
-    boolean csFinished = false, isAccepted = false;
-    String g2LogP1 = "", g2LogP2 = "", g2LogOR = "", g2LogAND = "", g2LogResult = " Bekliyor...";
-    List<String> g2Steps = new ArrayList<>();
+    List<LineObj> lines = new ArrayList<>();
+    boolean isDrawingLine = false;
+    float tempX, tempY;
 
-    // Görev 3 Değerleri
-    float polyClipXMin = 0, polyClipXMax = 10, polyClipYMin = 0, polyClipYMax = 10;
-    List<float[]> originalPoly = new ArrayList<>();
-    List<float[]> currentPoly = new ArrayList<>();
-    int polyStep = 0;
-    int polyType = 0; // 0: Konveks, 1: Konkav
-    String g3EdgeName = "Başlangıç";
+    // Görev 3 Dünya ve Pencere
+    float w3XMin = -4, w3XMax = 14, w3YMin = -4, w3YMax = 14;
+    float shXMin = 0, shXMax = 10, shYMin = 0, shYMax = 10;
+    List<PolyObj> polys = new ArrayList<>();
+    boolean isDrawingPoly = false;
+    List<float[]> customPoly = new ArrayList<>();
 
-    public static void main(String[] args) {
-        PApplet.main("com.grafikler.editor.MainApp");
-    }
+    public static void main(String[] args) { PApplet.main("com.grafikler.editor.MainApp"); }
 
     @Override
     public void settings() {
-        // Windows görev çubuğu altında kalmaması için yükseklik küçültüldü
         size(1280, 720);
-        // Grafikleri yumuşatmak ve piksellenmeyi (tırtıklı görünümü) önlemek için yüksek seviye anti-aliasing (8x MSAA)
         smooth(8);
     }
 
     @Override
     public void setup() {
         surface.setTitle("2D Görüntüleme ve Kırpma Editörü");
-        PFont myFont = createFont("Arial", 14, true);
-        textFont(myFont);
-        resetCS();
-        resetPoly();
+        textFont(createFont("Arial", 14, true));
+        addLine(2,2,8,6);
+        addPoly(0);
     }
 
-    // --- YARDIMCI KOORDİNAT DÖNÜŞÜM FONKSİYONLARI (ÇİZİM İÇİN) ---
-    private float mapWX(float x, float wMin, float wMax, float pMin, float pMax) {
-        return pMin + (x - wMin) * (pMax - pMin) / (wMax - wMin);
-    }
-    private float mapWY(float y, float wMin, float wMax, float pMin, float pMax) {
-        return pMax - (y - wMin) * (pMax - pMin) / (wMax - wMin); // Y-Flip uygulanmış hali
-    }
+    // --- KOORDİNAT DÖNÜŞÜMLERİ --- 
+    // (Ekran <-> Dünya - Matematiksel Y-Flip Dahil)
+    float w2sX(float wx, float vX, float vW, float wMin, float wMax) { return vX + (wx - wMin) * (vW / (wMax - wMin)); }
+    float w2sY(float wy, float vY, float vH, float wMin, float wMax) { return vY + vH - (wy - wMin) * (vH / (wMax - wMin)); }
+    float s2wX(float sx, float vX, float vW, float wMin, float wMax) { return wMin + (sx - vX) * ((wMax - wMin) / vW); }
+    float s2wY(float sy, float vY, float vH, float wMin, float wMax) { return wMin + (vY + vH - sy) * ((wMax - wMin) / vH); }
 
-    // --- GÖREV 1: KOORDİNAT DÖNÜŞÜMÜ (GERÇEK MATEMATİK) ---
-    private float mapX(float xw) { return xvMin + (xw - xwMin) * ((xvMax - xvMin) / (xwMax - xwMin)); }
-    private float mapY(float yw) { return yvMin + (ywMax - yw) * ((yvMax - yvMin) / (ywMax - ywMin)); }
+    float getCurWMinX() { return mode==2 ? w2XMin : w3XMin; }
+    float getCurWMaxX() { return mode==2 ? w2XMax : w3XMax; }
+    float getCurWMinY() { return mode==2 ? w2YMin : w3YMin; }
+    float getCurWMaxY() { return mode==2 ? w2YMax : w3YMax; }
+    float getCurCMinX() { return mode==2 ? csXMin : shXMin; }
+    float getCurCMaxX() { return mode==2 ? csXMax : shXMax; }
+    float getCurCMinY() { return mode==2 ? csYMin : shYMin; }
+    float getCurCMaxY() { return mode==2 ? csYMax : shYMax; }
 
-    // --- GÖREV 2: COHEN-SUTHERLAND MANTIĞI ---
-    private void resetCS() {
-        lineX1 = testLines[currentLineIdx][0]; lineY1 = testLines[currentLineIdx][1];
-        lineX2 = testLines[currentLineIdx][2]; lineY2 = testLines[currentLineIdx][3];
-        curX1 = lineX1; curY1 = lineY1; curX2 = lineX2; curY2 = lineY2;
-        csFinished = false; isAccepted = false;
-        g2Steps.clear();
-        g2LogResult = " İşlem Başlamadı";
-        updateCSLogs();
-    }
-
-    private int getCode(float x, float y) {
-        int code = 0;
-        if (x < csXMin) code |= 1; else if (x > csXMax) code |= 2;
-        if (y < csYMin) code |= 4; else if (y > csYMax) code |= 8;
-        return code;
-    }
-
-    private String getCodeStr(int code) { return String.format("%4s", Integer.toBinaryString(code)).replace(' ', '0'); }
-
-    private void updateCSLogs() {
-        int c1 = getCode(curX1, curY1), c2 = getCode(curX2, curY2);
-        g2LogP1 = getCodeStr(c1); g2LogP2 = getCodeStr(c2);
-        g2LogOR = getCodeStr(c1 | c2); g2LogAND = getCodeStr(c1 & c2);
-    }
-
-    private void doCSStep() {
-        if (csFinished) return;
-        int c1 = getCode(curX1, curY1), c2 = getCode(curX2, curY2);
-        if ((c1 | c2) == 0) {
-            csFinished = true; isAccepted = true; g2LogResult = " KABUL EDİLDİ (Tamamen İçeride)"; 
-            g2Steps.add("Çizgi tamamen pencere içinde, kabul edildi."); return;
-        } else if ((c1 & c2) != 0) {
-            csFinished = true; isAccepted = false; g2LogResult = " REDDEDİLDİ (Tamamen Dışarıda)"; 
-            g2Steps.add("Çizgi tamamen pencere dışında (AND != 0), reddedildi."); return;
+    // --- SINIFLAR (C-S Çizgi ve S-H Poligon) ---
+    class LineObj {
+        float x1, y1, x2, y2, cx1, cy1, cx2, cy2;
+        boolean done, accepted;
+        String log = "Bekliyor...";
+        int c1, c2;
+        LineObj(float x1, float y1, float x2, float y2) { 
+            this.x1=x1; this.y1=y1; this.x2=x2; this.y2=y2; 
+            this.cx1=x1; this.cy1=y1; this.cx2=x2; this.cy2=y2;
+            calcInstant();
         }
-        int outCode = (c1 != 0) ? c1 : c2;
-        float ix = 0, iy = 0;
-        float dx = (curX2 - curX1) == 0 ? 0.0001f : (curX2 - curX1);
-        float dy = (curY2 - curY1) == 0 ? 0.0001f : (curY2 - curY1);
-        String eName = "";
-        if ((outCode & 8) != 0) { ix = curX1 + dx * (csYMax - curY1) / dy; iy = csYMax; eName="Üst"; }
-        else if ((outCode & 4) != 0) { ix = curX1 + dx * (csYMin - curY1) / dy; iy = csYMin; eName="Alt"; }
-        else if ((outCode & 2) != 0) { iy = curY1 + dy * (csXMax - curX1) / dx; ix = csXMax; eName="Sağ"; }
-        else if ((outCode & 1) != 0) { iy = curY1 + dy * (csXMin - curX1) / dx; ix = csXMin; eName="Sol"; }
+        int getCode(float x, float y) {
+            int c = 0;
+            if (x < csXMin) c |= 1; else if (x > csXMax) c |= 2;
+            if (y < csYMin) c |= 4; else if (y > csYMax) c |= 8;
+            return c;
+        }
+        String getCodeStr(int c) { return String.format("%4s", Integer.toBinaryString(c)).replace(' ', '0'); }
+        void calcInstant() {
+            cx1=x1; cy1=y1; cx2=x2; cy2=y2; done=false; accepted=false;
+            while(!done) step();
+        }
+        void reset() { cx1=x1; cy1=y1; cx2=x2; cy2=y2; done=false; accepted=false; log="Sıfırlandı."; c1=getCode(cx1,cy1); c2=getCode(cx2,cy2); }
+        void step() {
+            if(done) return;
+            c1 = getCode(cx1, cy1); c2 = getCode(cx2, cy2);
+            String s1=getCodeStr(c1), s2=getCodeStr(c2);
+            if ((c1 | c2) == 0) { done = true; accepted = true; log="KABUL (P1:"+s1+" P2:"+s2+" OR:0000)"; return; }
+            if ((c1 & c2) != 0) { done = true; accepted = false; log="RET (P1:"+s1+" P2:"+s2+" AND:"+getCodeStr(c1&c2)+")"; return; }
+            int out = (c1 != 0) ? c1 : c2;
+            float ix=0, iy=0, dx=cx2-cx1, dy=cy2-cy1;
+            if(dx==0) dx=0.0001f; if(dy==0) dy=0.0001f;
+            if ((out & 8) != 0) { ix = cx1 + dx*(csYMax-cy1)/dy; iy = csYMax; log="Üstten kesildi."; }
+            else if ((out & 4) != 0) { ix = cx1 + dx*(csYMin-cy1)/dy; iy = csYMin; log="Alttan kesildi."; }
+            else if ((out & 2) != 0) { iy = cy1 + dy*(csXMax-cx1)/dx; ix = csXMax; log="Sağdan kesildi."; }
+            else if ((out & 1) != 0) { iy = cy1 + dy*(csXMin-cx1)/dx; ix = csXMin; log="Soldan kesildi."; }
+            if (out == c1) { cx1=ix; cy1=iy; } else { cx2=ix; cy2=iy; }
+            c1 = getCode(cx1, cy1); c2 = getCode(cx2, cy2);
+        }
+    }
+
+    class PolyObj {
+        List<float[]> orig = new ArrayList<>(), curr = new ArrayList<>();
+        int step = 0; String log = "Bekliyor.";
+        PolyObj(List<float[]> pts) { 
+            for(float[] p:pts) orig.add(new float[]{p[0],p[1]});
+            curr.addAll(orig); calcInstant();
+        }
+        void reset() { curr.clear(); curr.addAll(orig); step=0; log="Sıfırlandı."; }
+        void calcInstant() { reset(); while(step<=3) step(); }
+        boolean isInside(float[] p, int edge) {
+            if(edge==0) return p[0]>=shXMin; if(edge==1) return p[0]<=shXMax;
+            if(edge==2) return p[1]>=shYMin; return p[1]<=shYMax;
+        }
+        float[] getIntersect(float[] p1, float[] p2, int edge) {
+            float x1=p1[0], y1=p1[1], x2=p2[0], y2=p2[1], ix=0, iy=0, dx=x2-x1, dy=y2-y1;
+            if(dx==0) dx=0.0001f; if(dy==0) dy=0.0001f;
+            if(edge==0) { ix=shXMin; iy=y1+dy*(shXMin-x1)/dx; }
+            else if(edge==1) { ix=shXMax; iy=y1+dy*(shXMax-x1)/dx; }
+            else if(edge==2) { iy=shYMin; ix=x1+dx*(shYMin-y1)/dy; }
+            else if(edge==3) { iy=shYMax; ix=x1+dx*(shYMax-y1)/dy; }
+            return new float[]{ix, iy};
+        }
+        void step() {
+            if(step>3) return;
+            List<float[]> nxt = new ArrayList<>();
+            if(curr.size()>0) {
+                float[] S = curr.get(curr.size()-1);
+                for(float[] E : curr) {
+                    boolean sIn = isInside(S, step), eIn = isInside(E, step);
+                    if(sIn && eIn) nxt.add(E);
+                    else if(sIn && !eIn) nxt.add(getIntersect(S,E,step));
+                    else if(!sIn && eIn) { nxt.add(getIntersect(S,E,step)); nxt.add(E); }
+                    S = E;
+                }
+            }
+            curr = nxt; step++;
+            log = "Adım " + step + " (Kenar " + (step-1) + ") tamamlandı.";
+        }
+        float getArea(List<float[]> pList) {
+            if(pList.size()<3) return 0;
+            float s1=0, s2=0; int n=pList.size();
+            for(int i=0; i<n; i++) { s1+=pList.get(i)[0]*pList.get((i+1)%n)[1]; s2+=pList.get(i)[1]*pList.get((i+1)%n)[0]; }
+            return Math.abs(s1-s2)/2f;
+        }
+    }
+
+    // --- MOUSE VE PENCERE SÜRÜKLEME --- 
+    void checkHover(float mx, float my) {
+        if (!vMode || mode == 1) { hoverState = -1; cursor(ARROW); return; }
+        float wx = s2wX(mx, lX, pW, getCurWMinX(), getCurWMaxX());
+        float wy = s2wY(my, pY, pH, getCurWMinY(), getCurWMaxY());
+        float cxMin = getCurCMinX(), cxMax = getCurCMaxX(), cyMin = getCurCMinY(), cyMax = getCurCMaxY();
         
-        g2Steps.add(eName + " kenarında kesişim bulundu: (" + String.format(Locale.US, "%.1f, %.1f", ix, iy) + ")");
-        if (outCode == c1) { curX1 = ix; curY1 = iy; } else { curX2 = ix; curY2 = iy; }
-        updateCSLogs();
-    }
-
-    // --- GÖREV 3: SUTHERLAND-HODGMAN MANTIĞI VE ALAN HESABI ---
-    private float calculateArea(List<float[]> poly) {
-        if (poly == null || poly.size() < 3) return 0;
-        float sum1 = 0, sum2 = 0;
-        int n = poly.size();
-        for (int i = 0; i < n; i++) {
-            sum1 += poly.get(i)[0] * poly.get((i + 1) % n)[1];
-            sum2 += poly.get(i)[1] * poly.get((i + 1) % n)[0];
-        }
-        return Math.abs(sum1 - sum2) / 2.0f;
-    }
-
-    private void resetPoly() {
-        originalPoly.clear();
-        if (polyType == 0) {
-            originalPoly.add(new float[]{-1, 3}); originalPoly.add(new float[]{5, -1});
-            originalPoly.add(new float[]{11, 3}); originalPoly.add(new float[]{5, 7});
-        } else {
-            originalPoly.add(new float[]{1, 1}); originalPoly.add(new float[]{9, 1});
-            originalPoly.add(new float[]{9, 4}); originalPoly.add(new float[]{6, 4});
-            originalPoly.add(new float[]{6, 2}); originalPoly.add(new float[]{4, 2});
-            originalPoly.add(new float[]{4, 4}); originalPoly.add(new float[]{1, 4});
-        }
-        currentPoly = new ArrayList<>(originalPoly);
-        polyStep = 0;
-        g3EdgeName = "Başlangıç Durumu";
-    }
-
-    private boolean isInside(float[] p, int edge) {
-        if (edge == 0) return p[0] >= polyClipXMin;      
-        if (edge == 1) return p[0] <= polyClipXMax;     
-        if (edge == 2) return p[1] >= polyClipYMin;      
-        if (edge == 3) return p[1] <= polyClipYMax;     
-        return false;
-    }
-
-    private float[] getIntersect(float[] p1, float[] p2, int edge) {
-        float x1 = p1[0], y1 = p1[1], x2 = p2[0], y2 = p2[1];
-        float ix = 0, iy = 0;
-        float dx = x2 - x1, dy = y2 - y1;
-        if (dx == 0) dx = 0.0001f; if (dy == 0) dy = 0.0001f;
-        if (edge == 0)      { ix = polyClipXMin; iy = y1 + dy * (polyClipXMin - x1) / dx; }
-        else if (edge == 1) { ix = polyClipXMax; iy = y1 + dy * (polyClipXMax - x1) / dx; }
-        else if (edge == 2) { iy = polyClipYMin; ix = x1 + dx * (polyClipYMin - y1) / dy; }
-        else if (edge == 3) { iy = polyClipYMax; ix = x1 + dx * (polyClipYMax - y1) / dy; }
-        return new float[]{ix, iy};
-    }
-
-    private void doPolyStep() {
-        if (polyStep > 3) return;
-        List<float[]> nextPoly = new ArrayList<>();
-        int edge = polyStep;
-        g3EdgeName = (edge==0)?"Sol Kenar (x=0)" : (edge==1)?"Sağ Kenar (x=10)" : (edge==2)?"Alt Kenar (y=0)" : "Üst Kenar (y=10)";
+        float sxMin = w2sX(cxMin, lX, pW, getCurWMinX(), getCurWMaxX());
+        float sxMax = w2sX(cxMax, lX, pW, getCurWMinX(), getCurWMaxX());
+        float syMax = w2sY(cyMin, pY, pH, getCurWMinY(), getCurWMaxY()); // Screen Y goes down
+        float syMin = w2sY(cyMax, pY, pH, getCurWMinY(), getCurWMaxY());
         
-        if (currentPoly.size() > 0) {
-            float[] S = currentPoly.get(currentPoly.size() - 1);
-            for (float[] E : currentPoly) {
-                boolean sIn = isInside(S, edge), eIn = isInside(E, edge);
-                if (sIn && eIn) { nextPoly.add(E); }
-                else if (sIn && !eIn) { nextPoly.add(getIntersect(S, E, edge)); }
-                else if (!sIn && !eIn) { }
-                else if (!sIn && eIn) { nextPoly.add(getIntersect(S, E, edge)); nextPoly.add(E); }
-                S = E;
+        float tol = 15;
+        boolean onL = abs(mx - sxMin) < tol, onR = abs(mx - sxMax) < tol;
+        boolean onT = abs(my - syMin) < tol, onB = abs(my - syMax) < tol;
+        boolean inY = my >= syMin - tol && my <= syMax + tol;
+        boolean inX = mx >= sxMin - tol && mx <= sxMax + tol;
+
+        if (onL && onT) hoverState = 4; else if (onR && onT) hoverState = 5;
+        else if (onL && onB) hoverState = 6; else if (onR && onB) hoverState = 7;
+        else if (onL && inY) hoverState = 0; else if (onR && inY) hoverState = 1;
+        else if (onT && inX) hoverState = 2; else if (onB && inX) hoverState = 3;
+        else hoverState = -1;
+
+        if(hoverState >= 4) cursor(CROSS); else if(hoverState >= 0) cursor(MOVE); else cursor(ARROW);
+    }
+
+    @Override
+    public void mouseMoved() { checkHover(mouseX, mouseY); }
+
+    @Override
+    public void mousePressed() {
+        if(mouseX>=lX && mouseX<=lX+pW && mouseY>=pY && mouseY<=pY+pH) {
+            float wx = s2wX(mouseX, lX, pW, getCurWMinX(), getCurWMaxX());
+            float wy = s2wY(mouseY, pY, pH, getCurWMinY(), getCurWMaxY());
+            if(vMode && hoverState != -1) {
+                dragState = hoverState;
+            } else if (!vMode) {
+                if(mode == 2) { isDrawingLine=true; tempX=wx; tempY=wy; }
+                else if(mode == 3) { isDrawingPoly=true; customPoly.add(new float[]{wx,wy}); }
             }
         }
-        currentPoly = nextPoly;
-        polyStep++;
-        if(polyStep > 3) g3EdgeName = "Kırpma Tamamlandı";
     }
 
-    // --- ÇİZİM VE ARAYÜZ (ANA DÖNGÜ) ---
     @Override
-    public void draw() {
-        background(30);
-        drawHeader();
-        if (mode == 1) drawMode1();
-        else if (mode == 2) drawMode2();
-        else if (mode == 3) drawMode3();
-        drawFooter();
-    }
-
-    private void drawHeader() {
-        fill(255); textAlign(CENTER, TOP); textSize(24);
-        text("2D Görüntüleme ve Kırpma Editörü", width / 2f, 20);
-        textSize(16); fill(200); text("Mevcut Mod: " + modeName, width / 2f, 50);
-        stroke(100); line(50, 80, width - 50, 80);
-    }
-
-    private void drawFooter() {
-        stroke(100); line(50, height - 50, width - 50, height - 50);
-        fill(200); textAlign(CENTER, BOTTOM); textSize(14);
-        String info = "[1] Görev 1 | [2] Görev 2 | [3] Görev 3  ---  [A-F / K-U] Test Seç  ---  [Space] Adım İlerle  ---  [R] Sıfırla";
-        text(info, width / 2f, height - 15);
-    }
-
-    // --- GÖREV 1 ARAYÜZÜ ---
-    private void drawMode1() {
-        // Sol Panel: Dünya
-        fill(40); stroke(100); rect(leftX, panelY, panelW, panelH, 5);
-        fill(255); textAlign(CENTER, TOP); textSize(18);
-        text("Dünya Koordinatları (Window)", leftX + panelW / 2f, panelY - 25);
-        
-        stroke(80); 
-        float originX = mapWX(0, xwMin, xwMax, leftX, leftX+panelW);
-        float originY = mapWY(0, ywMin, ywMax, panelY, panelY+panelH);
-        line(leftX, originY, leftX+panelW, originY); // X ekseni
-        line(originX, panelY, originX, panelY+panelH); // Y ekseni
-
-        // Sağ Panel: Viewport
-        fill(40); stroke(100); rect(rightX, panelY, panelW, panelH, 5);
-        fill(255); textAlign(CENTER, TOP);
-        text("Viewport / Piksel Karşılığı", rightX + panelW / 2f, panelY - 25);
-        
-        // Viewport Kutusunu sağ panelin içine göreceli çiz
-        float vpScreenX = rightX + xvMin;
-        float vpScreenY = panelY + yvMin;
-        float vpW = xvMax - xvMin;
-        float vpH = yvMax - yvMin;
-        stroke(0, 150, 255); noFill(); strokeWeight(2);
-        rect(vpScreenX, vpScreenY, vpW, vpH);
-        strokeWeight(1);
-
-        // Noktaları Çiz
-        for (float[] p : testPoints) {
-            // Sol panel çizimi
-            float pxW = mapWX(p[0], xwMin, xwMax, leftX, leftX+panelW);
-            float pyW = mapWY(p[1], ywMin, ywMax, panelY, panelY+panelH);
-            fill(255, 255, 0); noStroke(); ellipse(pxW, pyW, 8, 8);
-            fill(220); textAlign(LEFT, BOTTOM); textSize(12);
-            text(String.format("W(%.0f, %.0f)", p[0], p[1]), pxW + 5, pyW - 5);
-
-            // Sağ panel çizimi
-            float pxV = rightX + mapX(p[0]);
-            float pyV = panelY + mapY(p[1]);
-            fill(0, 255, 0); ellipse(pxV, pyV, 8, 8);
-            fill(220); text(String.format("V(%.0f, %.0f)", mapX(p[0]), mapY(p[1])), pxV + 5, pyV - 5);
+    public void mouseDragged() {
+        if(dragState != -1 && vMode) {
+            float wx = s2wX(mouseX, lX, pW, getCurWMinX(), getCurWMaxX());
+            float wy = s2wY(mouseY, pY, pH, getCurWMinY(), getCurWMaxY());
+            float minS = 1.0f;
+            if(mode == 2) {
+                if((dragState==0||dragState==4||dragState==6) && wx < csXMax-minS) csXMin=wx;
+                if((dragState==1||dragState==5||dragState==7) && wx > csXMin+minS) csXMax=wx;
+                if((dragState==3||dragState==6||dragState==7) && wy < csYMax-minS) csYMin=wy;
+                if((dragState==2||dragState==4||dragState==5) && wy > csYMin+minS) csYMax=wy;
+                for(LineObj l:lines) l.calcInstant();
+            } else if (mode == 3) {
+                if((dragState==0||dragState==4||dragState==6) && wx < shXMax-minS) shXMin=wx;
+                if((dragState==1||dragState==5||dragState==7) && wx > shXMin+minS) shXMax=wx;
+                if((dragState==3||dragState==6||dragState==7) && wy < shYMax-minS) shYMin=wy;
+                if((dragState==2||dragState==4||dragState==5) && wy > shYMin+minS) shYMax=wy;
+                for(PolyObj p:polys) p.calcInstant();
+            }
         }
-
-        // Alt Formül
-        fill(255, 255, 0); textAlign(CENTER, TOP); textSize(14);
-        text("Hesaplama: X_v = 50 + (X_w + 150) * 1.266   |   Y_v = 30 + (100 - Y_w) * 1.3 (Y-Flip)", width/2f, panelY + panelH + 15);
     }
 
-    // --- GÖREV 2 ARAYÜZÜ ---
-    private void drawMode2() {
-        fill(40); stroke(100); rect(leftX, panelY, panelW, panelH, 5); rect(rightX, panelY, panelW, panelH, 5);
-        fill(255); textAlign(CENTER, TOP); textSize(18);
-        text("Orijinal Çizgi (Çizgi " + lineNames[currentLineIdx] + ")", leftX + panelW / 2f, panelY - 25);
-        text("Kırpılmış Sonuç ve Loglar", rightX + panelW / 2f, panelY - 25);
-
-        // Sol Panel Izgara ve Pencere
-        stroke(60); 
-        for(int i=0; i<=10; i++) {
-            line(mapWX(i, 0, 10, leftX, leftX+panelW), panelY, mapWX(i, 0, 10, leftX, leftX+panelW), panelY+panelH);
-            line(leftX, mapWY(i, 0, 10, panelY, panelY+panelH), leftX+panelW, mapWY(i, 0, 10, panelY, panelY+panelH));
+    @Override
+    public void mouseReleased() {
+        dragState = -1;
+        if(isDrawingLine && mode==2) {
+            isDrawingLine=false;
+            float wx = s2wX(mouseX, lX, pW, getCurWMinX(), getCurWMaxX());
+            float wy = s2wY(mouseY, pY, pH, getCurWMinY(), getCurWMaxY());
+            addLine(tempX, tempY, wx, wy);
         }
-        stroke(0, 150, 255); noFill(); strokeWeight(3);
-        rectMode(CORNERS);
-        rect(mapWX(csXMin, 0, 10, leftX, leftX+panelW), mapWY(csYMax, 0, 10, panelY, panelY+panelH),
-             mapWX(csXMax, 0, 10, leftX, leftX+panelW), mapWY(csYMin, 0, 10, panelY, panelY+panelH));
-        rectMode(CORNER); strokeWeight(1);
-
-        // Orijinal Çizgi
-        stroke(150); strokeWeight(3);
-        line(mapWX(lineX1, 0, 10, leftX, leftX+panelW), mapWY(lineY1, 0, 10, panelY, panelY+panelH),
-             mapWX(lineX2, 0, 10, leftX, leftX+panelW), mapWY(lineY2, 0, 10, panelY, panelY+panelH));
-        strokeWeight(1);
-
-        // Sağ Panel Üst Yarı: Kırpılmış Görsel
-        float rpDrawH = 260;
-        stroke(60); 
-        for(int i=0; i<=10; i++) {
-            line(mapWX(i, 0, 10, rightX, rightX+panelW), panelY, mapWX(i, 0, 10, rightX, rightX+panelW), panelY+rpDrawH);
-            line(rightX, mapWY(i, 0, 10, panelY, panelY+rpDrawH), rightX+panelW, mapWY(i, 0, 10, panelY, panelY+rpDrawH));
-        }
-        stroke(0, 150, 255); noFill(); strokeWeight(3); rectMode(CORNERS);
-        rect(mapWX(csXMin, 0, 10, rightX, rightX+panelW), mapWY(csYMax, 0, 10, panelY, panelY+rpDrawH),
-             mapWX(csXMax, 0, 10, rightX, rightX+panelW), mapWY(csYMin, 0, 10, panelY, panelY+rpDrawH));
-        rectMode(CORNER); strokeWeight(1);
-
-        if (!csFinished) {
-            stroke(255, 165, 0); strokeWeight(3);
-            line(mapWX(curX1, 0, 10, rightX, rightX+panelW), mapWY(curY1, 0, 10, panelY, panelY+rpDrawH),
-                 mapWX(curX2, 0, 10, rightX, rightX+panelW), mapWY(curY2, 0, 10, panelY, panelY+rpDrawH));
-        } else if (isAccepted) {
-            stroke(0, 255, 0); strokeWeight(4);
-            line(mapWX(curX1, 0, 10, rightX, rightX+panelW), mapWY(curY1, 0, 10, panelY, panelY+rpDrawH),
-                 mapWX(curX2, 0, 10, rightX, rightX+panelW), mapWY(curY2, 0, 10, panelY, panelY+rpDrawH));
-        }
-        fill(255, 255, 0); noStroke();
-        ellipse(mapWX(curX1, 0, 10, rightX, rightX+panelW), mapWY(curY1, 0, 10, panelY, panelY+rpDrawH), 8, 8);
-        ellipse(mapWX(curX2, 0, 10, rightX, rightX+panelW), mapWY(curY2, 0, 10, panelY, panelY+rpDrawH), 8, 8);
-        if(csFinished && !isAccepted) {
-            fill(255, 0, 0); textAlign(CENTER, CENTER); textSize(24);
-            text("REJECTED", rightX + panelW/2f, panelY + rpDrawH/2f);
-        }
-
-        // Sağ Panel Alt Yarı: Loglar
-        stroke(100); line(rightX, panelY + rpDrawH, rightX + panelW, panelY + rpDrawH);
-        fill(220); textAlign(LEFT, TOP); textSize(14);
-        float logY = panelY + rpDrawH + 15;
-        text("P1 Kodu: " + g2LogP1 + "   |   P2 Kodu: " + g2LogP2, rightX + 20, logY); logY += 25;
-        text("OR Sonucu: " + g2LogOR + "   |   AND Sonucu: " + g2LogAND, rightX + 20, logY); logY += 25;
-        fill(csFinished ? (isAccepted ? color(0,255,0) : color(255,0,0)) : color(255,255,0));
-        text("Durum:" + g2LogResult, rightX + 20, logY); logY += 30;
-        fill(200); textSize(12);
-        for(String s : g2Steps) { text("- " + s, rightX + 20, logY); logY += 20; }
     }
 
-    // --- GÖREV 3 ARAYÜZÜ ---
-    private void drawMode3() {
-        fill(40); stroke(100); rect(leftX, panelY, panelW, panelH, 5); rect(rightX, panelY, panelW, panelH, 5);
-        
-        float origArea = calculateArea(originalPoly), currArea = calculateArea(currentPoly);
-        fill(255); textAlign(CENTER, TOP); textSize(18);
-        text("Orijinal Poligon", leftX + panelW / 2f, panelY - 25);
-        text("Kırpılmış Poligon (" + g3EdgeName + ")", rightX + panelW / 2f, panelY - 25);
-
-        // Sol Çizim
-        drawPolyGrid(leftX, panelY, panelW, panelH);
-        stroke(150); strokeWeight(2); fill(150, 150, 150, 100);
-        beginShape(); for(float[] p : originalPoly) vertex(mapWX(p[0], -4, 14, leftX, leftX+panelW), mapWY(p[1], -4, 14, panelY, panelY+panelH)); endShape(CLOSE);
-
-        // Sağ Çizim
-        drawPolyGrid(rightX, panelY, panelW, panelH);
-        stroke(0, 255, 0); strokeWeight(3); fill(0, 255, 0, 100);
-        beginShape(); for(float[] p : currentPoly) vertex(mapWX(p[0], -4, 14, rightX, rightX+panelW), mapWY(p[1], -4, 14, panelY, panelY+panelH)); endShape(CLOSE);
-        fill(255, 255, 0); noStroke();
-        for(float[] p : currentPoly) ellipse(mapWX(p[0], -4, 14, rightX, rightX+panelW), mapWY(p[1], -4, 14, panelY, panelY+panelH), 8, 8);
-
-        // Alt Kısım Nokta Listesi ve Alan
-        fill(255, 255, 0); textAlign(CENTER, TOP); textSize(14);
-        text("Orijinal Alan: " + String.format("%.1f", origArea), leftX + panelW/2f, panelY + panelH + 10);
-        text("Kırpılmış Alan: " + String.format("%.1f", currArea), rightX + panelW/2f, panelY + panelH + 10);
-        
-        fill(200); textSize(12);
-        StringBuilder sb = new StringBuilder("Kırpılmış Noktalar: ");
-        for(float[] p : currentPoly) sb.append(String.format(Locale.US, "(%.1f, %.1f)  ", p[0], p[1]));
-        text(sb.toString(), width/2f, panelY + panelH + 30);
-    }
-
-    private void drawPolyGrid(float x, float y, float w, float h) {
-        stroke(60); strokeWeight(1);
-        for(int i=-4; i<=14; i+=2) {
-            line(mapWX(i, -4, 14, x, x+w), y, mapWX(i, -4, 14, x, x+w), y+h);
-            line(x, mapWY(i, -4, 14, y, y+h), x+w, mapWY(i, -4, 14, y, y+h));
-        }
-        stroke(0, 150, 255); noFill(); strokeWeight(3); rectMode(CORNERS);
-        rect(mapWX(0, -4, 14, x, x+w), mapWY(10, -4, 14, y, y+h), mapWX(10, -4, 14, x, x+w), mapWY(0, -4, 14, y, y+h));
-        rectMode(CORNER); strokeWeight(1);
-    }
-
-    // --- KLAVYE ETKİLEŞİMLERİ ---
+    // --- TUŞ KONTROLLERİ VE TESTLER ---
     @Override
     public void keyPressed() {
         char k = Character.toUpperCase(key);
-        if (k == '1') { mode = 1; modeName = "Koordinat Dönüşümü"; }
-        else if (k == '2') { mode = 2; modeName = "Cohen-Sutherland Çizgi Kırpma"; resetCS(); }
-        else if (k == '3') { mode = 3; modeName = "Sutherland-Hodgman Poligon Kırpma"; resetPoly(); }
-        else if (k == ' ') {
-            if (mode == 2) doCSStep(); else if (mode == 3) doPolyStep();
+        if(k=='1') {mode=1; perfMsg="";} else if(k=='2') {mode=2; perfMsg="";} else if(k=='3') {mode=3; perfMsg="";}
+        else if(k=='V') { vMode = !vMode; checkHover(mouseX, mouseY); }
+        else if(k=='R') {
+            if(mode==2) { lines.clear(); addLine(2,2,8,6); perfMsg=""; }
+            else if(mode==3) { polys.clear(); customPoly.clear(); addPoly(0); perfMsg=""; }
         }
-        else if (k == 'R') {
-            if (mode == 2) resetCS(); else if (mode == 3) resetPoly();
+        else if(k==' ') {
+            if(mode==2 && !lines.isEmpty()) lines.get(lines.size()-1).step();
+            else if(mode==3 && !polys.isEmpty()) polys.get(polys.size()-1).step();
         }
-        else if (mode == 2 && k >= 'A' && k <= 'F') {
-            currentLineIdx = k - 'A'; resetCS();
+        else if(mode==2) {
+            if(k=='A') addLine(2,2,8,6); else if(k=='B') addLine(2,4,8,4); else if(k=='C') addLine(5,2,5,10);
+            else if(k=='D') addLine(1,1,1,5); else if(k=='E') addLine(0,0,10,8); else if(k=='F') addLine(5,5,5,5);
+            else if(k=='P') runPerfCS();
         }
-        else if (mode == 3) {
-            if (k == 'K') { polyType = 0; resetPoly(); }
-            else if (k == 'U') { polyType = 1; resetPoly(); }
+        else if(mode==3) {
+            if(k=='K') addPoly(0); else if(k=='U') addPoly(1); else if(k=='O') runPerfSH();
+            else if(key==ENTER || key==RETURN) { 
+                if(customPoly.size()>2) polys.add(new PolyObj(customPoly)); 
+                customPoly.clear(); isDrawingPoly=false; 
+            }
+            else if(key==BACKSPACE || key==8) { if(customPoly.size()>0) customPoly.remove(customPoly.size()-1); }
+        }
+    }
+
+    void addLine(float x1, float y1, float x2, float y2) { lines.add(new LineObj(x1,y1,x2,y2)); }
+    void addPoly(int type) {
+        List<float[]> p = new ArrayList<>();
+        if(type==0) { p.add(new float[]{-1,3}); p.add(new float[]{5,-1}); p.add(new float[]{11,3}); p.add(new float[]{5,7}); }
+        else { p.add(new float[]{1,1}); p.add(new float[]{9,1}); p.add(new float[]{9,4}); p.add(new float[]{6,4}); p.add(new float[]{6,2}); p.add(new float[]{4,2}); p.add(new float[]{4,4}); p.add(new float[]{1,4}); }
+        polys.add(new PolyObj(p));
+    }
+
+    void runPerfCS() {
+        long t0 = millis(); int acc=0, rej=0, clip=0;
+        for(int i=0; i<1000; i++) {
+            LineObj l = new LineObj(random(w2XMin,w2XMax), random(w2YMin,w2YMax), random(w2XMin,w2XMax), random(w2YMin,w2YMax));
+            if(l.accepted) acc++; else if(l.x1==l.cx1 && l.y1==l.cy1 && l.x2==l.cx2 && l.y2==l.cy2) rej++; else clip++;
+        }
+        perfMsg = "[PERF] 1000 Çizgi Kırpıldı -> Süre: " + (millis()-t0) + " ms. (Kabul:"+acc+" Ret:"+rej+" Kırpılan:"+clip+")";
+    }
+    void runPerfSH() {
+        long t0 = millis();
+        for(int i=0; i<1000; i++) {
+            List<float[]> rp = new ArrayList<>();
+            for(int j=0; j<4; j++) rp.add(new float[]{random(w3XMin,w3XMax), random(w3YMin,w3YMax)});
+            new PolyObj(rp);
+        }
+        perfMsg = "[PERF] 1000 Rastgele Dörtgen Kırpıldı -> Süre: " + (millis()-t0) + " ms.";
+    }
+
+    // --- ÇİZİM DÖNGÜSÜ ---
+    @Override
+    public void draw() {
+        background(25);
+        fill(255); textAlign(CENTER, TOP); textSize(24);
+        text("2D Görüntüleme ve Kırpma Editörü", width/2f, 15);
+        textSize(14); fill(180);
+        text("Mod: " + (mode==1?"1 (Dönüşüm)":mode==2?"2 (Cohen-Sutherland)":"3 (Sutherland-Hodgman)") + 
+             (vMode?" [V: PENCERE DÜZENLEME AÇIK]":"") + "   " + perfMsg, width/2f, 45);
+        stroke(80); line(30, 70, width-30, 70);
+
+        if(mode==1) drawM1(); else if(mode==2) drawM2(); else drawM3();
+
+        stroke(80); line(30, height-60, width-30, height-60);
+        fill(200); textAlign(CENTER, BOTTOM); textSize(14);
+        text("[1-3] Mod  |  [V] Edit Modu  |  [Space] Animasyon Adımı  |  [R] Temizle\n" +
+             "[M2] A-F:Çizgi, P:Perf.Test  |  [M3] K:Konveks, U:Konkav, O:Perf.Test, Enter:Poligon Bitir", width/2f, height-15);
+    }
+
+    void drawM1() {
+        fill(35); stroke(80); rect(lX, pY, pW, pH, 5); rect(rX, pY, pW, pH, 5);
+        fill(255); textAlign(CENTER, TOP); textSize(16);
+        text("Dünya Koordinatları (Window)", lX+pW/2, pY-25);
+        text("Piksel Koordinatları (Viewport)", rX+pW/2, pY-25);
+
+        float ox = w2sX(0, lX, pW, xwMin, xwMax), oy = w2sY(0, pY, pH, ywMin, ywMax);
+        stroke(80); line(lX, oy, lX+pW, oy); line(ox, pY, ox, pY+pH);
+
+        float vSX = rX+xvMin, vSY = pY+yvMin, vW = xvMax-xvMin, vH = yvMax-yvMin;
+        stroke(0,150,255); noFill(); strokeWeight(2); rect(vSX, vSY, vW, vH); strokeWeight(1);
+
+        for(float[] p : testPoints) {
+            float pxW = w2sX(p[0], lX, pW, xwMin, xwMax), pyW = w2sY(p[1], pY, pH, ywMin, ywMax);
+            fill(255,255,0); noStroke(); ellipse(pxW, pyW, 8, 8);
+            fill(200); textAlign(LEFT, BOTTOM); text(String.format("W(%.0f, %.0f)",p[0],p[1]), pxW+5, pyW-5);
+
+            float pxV = rX+xvMin+(p[0]-xwMin)*(vW/(xwMax-xwMin));
+            float pyV = pY+yvMin+(ywMax-p[1])*(vH/(ywMax-ywMin));
+            fill(0,255,0); ellipse(pxV, pyV, 8, 8);
+            fill(200); text(String.format("V(%.0f, %.0f)",pxV-rX,pyV-pY), pxV+5, pyV-5);
+        }
+        fill(255,255,0); textAlign(CENTER, TOP);
+        text("Hesap: X_v = 50 + (X_w + 150)*1.266  |  Y_v = 30 + (100 - Y_w)*1.3 (Y-Flip)", width/2f, pY+pH+15);
+    }
+
+    void drawClipWindow(float x, float wX, float wW) {
+        stroke(60); strokeWeight(1);
+        for(int i=(int)getCurWMinX(); i<=(int)getCurWMaxX(); i+=2) {
+            line(w2sX(i, x, wW, getCurWMinX(), getCurWMaxX()), pY, w2sX(i, x, wW, getCurWMinX(), getCurWMaxX()), pY+pH);
+            line(x, w2sY(i, pY, pH, getCurWMinY(), getCurWMaxY()), x+wW, w2sY(i, pY, pH, getCurWMinY(), getCurWMaxY()));
+        }
+        stroke(vMode ? color(255,150,0) : color(0,150,255)); noFill(); strokeWeight(vMode?3:2); rectMode(CORNERS);
+        float pxMin = w2sX(getCurCMinX(), x, wW, getCurWMinX(), getCurWMaxX());
+        float pxMax = w2sX(getCurCMaxX(), x, wW, getCurWMinX(), getCurWMaxX());
+        float pyMin = w2sY(getCurCMaxY(), pY, pH, getCurWMinY(), getCurWMaxY());
+        float pyMax = w2sY(getCurCMinY(), pY, pH, getCurWMinY(), getCurWMaxY());
+        rect(pxMin, pyMin, pxMax, pyMax);
+        rectMode(CORNER); strokeWeight(1);
+
+        if(vMode && x==lX && hoverState!=-1) {
+            stroke(255,255,0); strokeWeight(5);
+            if(hoverState==0||hoverState==4||hoverState==6) line(pxMin, pyMin, pxMin, pyMax);
+            if(hoverState==1||hoverState==5||hoverState==7) line(pxMax, pyMin, pxMax, pyMax);
+            if(hoverState==2||hoverState==4||hoverState==5) line(pxMin, pyMin, pxMax, pyMin);
+            if(hoverState==3||hoverState==6||hoverState==7) line(pxMin, pyMax, pxMax, pyMax);
+            strokeWeight(1);
+        }
+    }
+
+    void drawM2() {
+        fill(35); stroke(80); rect(lX, pY, pW, pH, 5); rect(rX, pY, pW, pH, 5);
+        fill(255); textAlign(CENTER, TOP); textSize(16);
+        text("Orijinal Çizgiler & Pencere", lX+pW/2, pY-25); text("Kırpılmış Sonuçlar & Log", rX+pW/2, pY-25);
+        drawClipWindow(lX, pW, pW); drawClipWindow(rX, pW, pW);
+
+        for(LineObj l : lines) {
+            stroke(100); strokeWeight(2);
+            line(w2sX(l.x1,lX,pW,w2XMin,w2XMax), w2sY(l.y1,pY,pH,w2YMin,w2YMax), w2sX(l.x2,lX,pW,w2XMin,w2XMax), w2sY(l.y2,pY,pH,w2YMin,w2YMax));
+            if(!l.done) stroke(255,165,0);
+            else if(l.accepted) stroke(0,255,0); else continue;
+            strokeWeight(3);
+            line(w2sX(l.cx1,rX,pW,w2XMin,w2XMax), w2sY(l.cy1,pY,pH,w2YMin,w2YMax), w2sX(l.cx2,rX,pW,w2XMin,w2XMax), w2sY(l.cy2,pY,pH,w2YMin,w2YMax));
+            fill(255,255,0); noStroke();
+            ellipse(w2sX(l.cx1,rX,pW,w2XMin,w2XMax), w2sY(l.cy1,pY,pH,w2YMin,w2YMax), 8, 8);
+            ellipse(w2sX(l.cx2,rX,pW,w2XMin,w2XMax), w2sY(l.cy2,pY,pH,w2YMin,w2YMax), 8, 8);
+        }
+        if(isDrawingLine) {
+            stroke(200); strokeWeight(2);
+            line(w2sX(tempX,lX,pW,w2XMin,w2XMax), w2sY(tempY,pY,pH,w2YMin,w2YMax), mouseX, mouseY);
+        }
+
+        fill(200); textAlign(LEFT, TOP); textSize(14);
+        if(!lines.isEmpty()) {
+            LineObj al = lines.get(lines.size()-1);
+            text("Aktif Çizgi Logu: " + al.log, rX+15, pY+15);
+            text(String.format(Locale.US, "P1(%.1f, %.1f) Kod: %s", al.cx1, al.cy1, al.getCodeStr(al.c1)), rX+15, pY+35);
+            text(String.format(Locale.US, "P2(%.1f, %.1f) Kod: %s", al.cx2, al.cy2, al.getCodeStr(al.c2)), rX+15, pY+55);
+            text("OR: " + al.getCodeStr(al.c1|al.c2) + "  AND: " + al.getCodeStr(al.c1&al.c2), rX+15, pY+75);
+        }
+    }
+
+    void drawM3() {
+        fill(35); stroke(80); rect(lX, pY, pW, pH, 5); rect(rX, pY, pW, pH, 5);
+        fill(255); textAlign(CENTER, TOP); textSize(16);
+        text("Orijinal Poligonlar", lX+pW/2, pY-25); text("Kırpılmış Sonuçlar", rX+pW/2, pY-25);
+        drawClipWindow(lX, pW, pW); drawClipWindow(rX, pW, pW);
+
+        for(PolyObj p : polys) {
+            stroke(150); strokeWeight(2); fill(150,150,150,80);
+            beginShape(); for(float[] pt:p.orig) vertex(w2sX(pt[0],lX,pW,w3XMin,w3XMax), w2sY(pt[1],pY,pH,w3YMin,w3YMax)); endShape(CLOSE);
+            stroke(0,255,0); strokeWeight(3); fill(0,255,0,80);
+            beginShape(); for(float[] pt:p.curr) vertex(w2sX(pt[0],rX,pW,w3XMin,w3XMax), w2sY(pt[1],pY,pH,w3YMin,w3YMax)); endShape(CLOSE);
+            fill(255,255,0); noStroke();
+            for(float[] pt:p.curr) ellipse(w2sX(pt[0],rX,pW,w3XMin,w3XMax), w2sY(pt[1],pY,pH,w3YMin,w3YMax), 8, 8);
+        }
+
+        if(isDrawingPoly && customPoly.size()>0) {
+            stroke(200); strokeWeight(2); noFill();
+            beginShape(); for(float[] pt:customPoly) vertex(w2sX(pt[0],lX,pW,w3XMin,w3XMax), w2sY(pt[1],pY,pH,w3YMin,w3YMax));
+            vertex(mouseX, mouseY); endShape();
+        }
+
+        if(!polys.isEmpty()) {
+            PolyObj ap = polys.get(polys.size()-1);
+            fill(255,255,0); textAlign(CENTER, TOP); textSize(14);
+            text("Aktif Log: " + ap.log, width/2f, pY+pH+10);
+            text(String.format(Locale.US, "Orijinal Alan: %.1f  |  Kırpılmış Alan: %.1f", ap.getArea(ap.orig), ap.getArea(ap.curr)), width/2f, pY+pH+30);
         }
     }
 }

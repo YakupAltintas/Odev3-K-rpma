@@ -14,8 +14,8 @@ public class MainApp extends PApplet {
     int dragState = -1;
     String perfMsg = "";
 
-    float pW = 550, pH = 480;
-    float lX = 50, rX = 650, pY = 100;
+    float pW = 500, pH = 480;
+    float lX = 50, rX = 600, pY = 100;
 
     // Görev 1
     float xwMin = -150, xwMax = 150, ywMin = -100, ywMax = 100;
@@ -36,6 +36,7 @@ public class MainApp extends PApplet {
     List<PolyObj> polys = new ArrayList<>();
     boolean isDrawingPoly = false;
     List<float[]> customPoly = new ArrayList<>();
+    int polyType = 0; // 0: Konveks, 1: Konkav, 2: Özel
 
     public static void main(String[] args) { PApplet.main("com.grafikler.editor.MainApp"); }
 
@@ -115,51 +116,29 @@ public class MainApp extends PApplet {
             }
             if (animState == 3) { animSteps.add("Karar: Kısmi Kırpma. Kesişim aranıyor..."); animState++; return; }
 
-            // Hangi ucun dışarıda olduğunu bul
             int out = (c1 != 0) ? c1 : c2;
             float ix = 0, iy = 0;
-            float dx = cx2 - cx1;
-            float dy = cy2 - cy1;
+            float dx = cx2 - cx1, dy = cy2 - cy1;
             String kn = "";
 
-            // Formüller (Sıfıra bölünmeyi engelle)
-            if ((out & 8) != 0) { // Üst
-                ix = cx1 + (dx != 0 && dy != 0 ? dx * (csYMax - cy1) / dy : 0);
-                iy = csYMax;
-                kn = "Üst";
-            } else if ((out & 4) != 0) { // Alt
-                ix = cx1 + (dx != 0 && dy != 0 ? dx * (csYMin - cy1) / dy : 0);
-                iy = csYMin;
-                kn = "Alt";
-            } else if ((out & 2) != 0) { // Sağ
-                iy = cy1 + (dx != 0 && dy != 0 ? dy * (csXMax - cx1) / dx : 0);
-                ix = csXMax;
-                kn = "Sağ";
-            } else if ((out & 1) != 0) { // Sol
-                iy = cy1 + (dx != 0 && dy != 0 ? dy * (csXMin - cx1) / dx : 0);
-                ix = csXMin;
-                kn = "Sol";
-            }
+            if ((out & 8) != 0) { ix = cx1 + (dx != 0 && dy != 0 ? dx * (csYMax - cy1) / dy : 0); iy = csYMax; kn = "Üst"; }
+            else if ((out & 4) != 0) { ix = cx1 + (dx != 0 && dy != 0 ? dx * (csYMin - cy1) / dy : 0); iy = csYMin; kn = "Alt"; }
+            else if ((out & 2) != 0) { iy = cy1 + (dx != 0 && dy != 0 ? dy * (csXMax - cx1) / dx : 0); ix = csXMax; kn = "Sağ"; }
+            else if ((out & 1) != 0) { iy = cy1 + (dx != 0 && dy != 0 ? dy * (csXMin - cx1) / dx : 0); ix = csXMin; kn = "Sol"; }
             
             String iLog = String.format(Locale.US, "%s(%.1f, %.1f)", kn, ix, iy);
             intersectLogs.add(iLog);
             animSteps.add("Kesişim: " + iLog);
             
-            // Sadece dışarıdaki ucu yenisiyle değiştir
-            if (out == c1) {
-                cx1 = ix; cy1 = iy;
-            } else {
-                cx2 = ix; cy2 = iy;
-            }
-            // Yeni nokta için kodu tekrar hesapla ki döngü bir sonraki adımda doğru devam etsin
-            c1 = getCode(cx1, cy1); 
-            c2 = getCode(cx2, cy2);
+            if (out == c1) { cx1 = ix; cy1 = iy; } else { cx2 = ix; cy2 = iy; }
+            c1 = getCode(cx1, cy1); c2 = getCode(cx2, cy2);
         }
     }
 
     class PolyObj {
         List<float[]> orig = new ArrayList<>(), curr = new ArrayList<>();
-        int step = 0; String log = "Bekliyor.";
+        int step = 0; 
+        String log = "Bekliyor.";
         PolyObj(List<float[]> pts) { 
             for(float[] p:pts) orig.add(new float[]{p[0],p[1]});
             curr.addAll(orig); calcInstant();
@@ -191,8 +170,19 @@ public class MainApp extends PApplet {
                     S = E;
                 }
             }
-            curr = nxt; step++;
-            log = "Adım " + step + " tamamlandı.";
+            curr = nxt; 
+            String kenarAd = "";
+            if(step==0) kenarAd = "Sol kenar x >= " + shXMin;
+            else if(step==1) kenarAd = "Sağ kenar x <= " + shXMax;
+            else if(step==2) kenarAd = "Alt kenar y >= " + shYMin;
+            else if(step==3) kenarAd = "Üst kenar y <= " + shYMax;
+            step++;
+            
+            StringBuilder pts = new StringBuilder();
+            for(int i=0; i<Math.min(3, curr.size()); i++) pts.append(String.format(Locale.US, "(%.1f, %.1f) ", curr.get(i)[0], curr.get(i)[1]));
+            if(curr.size()>3) pts.append("... Toplam ").append(curr.size()).append(" nokta");
+            
+            log = "Adım " + step + ": " + kenarAd + " işlendi. Ara Liste: " + pts.toString();
         }
         float getArea(List<float[]> pList) {
             if(pList.size()<3) return 0;
@@ -282,7 +272,7 @@ public class MainApp extends PApplet {
         else if(k=='V') { vMode = !vMode; checkHover(mouseX, mouseY); }
         else if(k=='R') {
             if(mode==2) { lines.clear(); addLine(2,2,8,6); perfMsg=""; }
-            else if(mode==3) { polys.clear(); customPoly.clear(); addPoly(0); perfMsg=""; }
+            else if(mode==3) { polys.clear(); customPoly.clear(); polyType=0; addPoly(0); perfMsg=""; }
         }
         else if(k==' ') {
             if(mode==2 && !lines.isEmpty()) lines.get(lines.size()-1).step();
@@ -298,9 +288,11 @@ public class MainApp extends PApplet {
             else if(k=='P') runPerfCS();
         }
         else if(mode==3) {
-            if(k=='K') addPoly(0); else if(k=='U') addPoly(1); else if(k=='O') runPerfSH();
+            if(k=='K') { polyType=0; addPoly(0); } 
+            else if(k=='U') { polyType=1; addPoly(1); } 
+            else if(k=='O') runPerfSH();
             else if(key==ENTER || key==RETURN) { 
-                if(customPoly.size()>2) polys.add(new PolyObj(customPoly)); 
+                if(customPoly.size()>2) { polyType=2; polys.add(new PolyObj(customPoly)); } 
                 customPoly.clear(); isDrawingPoly=false; 
             }
             else if(key==BACKSPACE || key==8) { if(customPoly.size()>0) customPoly.remove(customPoly.size()-1); }
@@ -340,7 +332,9 @@ public class MainApp extends PApplet {
         if(mode==1) drawM1(); else if(mode==2) drawM2(); else drawM3();
         stroke(80); line(30, height-50, width-30, height-50);
         fill(200); textAlign(CENTER, BOTTOM); textSize(14);
-        text("[A-F] Test Çizgisi Seç  |  [Space] Adım İlerle  |  [V] Pencere Düzenle  |  [R] Sıfırla  |  [1-3] Mod Değiştir", width/2f, height-15);
+        if(mode == 1) text("[2-3] Mod Değiştir", width/2f, height-15);
+        else if(mode == 2) text("[A-F] Test Çizgisi Seç  |  [Space] Adım İlerle  |  [V] Pencere Düzenle  |  [R] Sıfırla  |  [1-3] Mod Değiştir", width/2f, height-15);
+        else if(mode == 3) text("[K] Konveks  |  [U] Konkav  |  [Space] Adım İlerle  |  [V] Pencere Düzenle  |  [Enter] Çizim Bitir  |  [Backspace] Son Nokta Sil |  [1-3] Mod Değiştir", width/2f, height-15);
     }
 
     private void drawHeader() {
@@ -503,18 +497,33 @@ public class MainApp extends PApplet {
     }
 
     void drawM3() {
-        fill(35); stroke(80); rect(lX, pY, pW, pH, 5); rect(rX, pY, pW, pH, 5);
+        fill(35); stroke(80); rect(lX, pY, pW, pH, 5); 
+        rect(rX, pY, 350, pH, 5); // Orijinal panel boyutu
+        
         fill(255); textAlign(CENTER, TOP); textSize(16);
-        text("Orijinal Poligonlar", lX+pW/2, pY-25); text("Kırpılmış Sonuçlar", rX+pW/2, pY-25);
-        drawClipWindow(lX, pW, pW); drawClipWindow(rX, pW, pW);
+        String pTip = polyType==0 ? "Konveks" : polyType==1 ? "Konkav U" : "Özel";
+        text("Orijinal Poligonlar (Seçili: " + pTip + ")", lX+pW/2, pY-25);
+        text("Kırpılmış Sonuçlar", rX+350/2, pY-25);
+        
+        drawClipWindow(lX, pW, pW); drawClipWindow(rX, pW, 350);
 
         for(PolyObj p : polys) {
             stroke(150); strokeWeight(2); fill(150,150,150,80);
             beginShape(); for(float[] pt:p.orig) vertex(w2sX(pt[0],lX,pW,w3XMin,w3XMax), w2sY(pt[1],pY,pH,w3YMin,w3YMax)); endShape(CLOSE);
+            
             stroke(0,255,0); strokeWeight(3); fill(0,255,0,80);
-            beginShape(); for(float[] pt:p.curr) vertex(w2sX(pt[0],rX,pW,w3XMin,w3XMax), w2sY(pt[1],pY,pH,w3YMin,w3YMax)); endShape(CLOSE);
+            beginShape(); for(float[] pt:p.curr) vertex(w2sX(pt[0],rX,350,w3XMin,w3XMax), w2sY(pt[1],pY,pH,w3YMin,w3YMax)); endShape(CLOSE);
+            
             fill(255,255,0); noStroke();
-            for(float[] pt:p.curr) ellipse(w2sX(pt[0],rX,pW,w3XMin,w3XMax), w2sY(pt[1],pY,pH,w3YMin,w3YMax), 8, 8);
+            for(float[] pt:p.curr) {
+                float px = w2sX(pt[0],rX,350,w3XMin,w3XMax);
+                float py = w2sY(pt[1],pY,pH,w3YMin,w3YMax);
+                ellipse(px, py, 8, 8);
+                // Kesişim etiketi (Sınır toleransı)
+                if(abs(pt[0]-shXMin)<0.1 || abs(pt[0]-shXMax)<0.1 || abs(pt[1]-shYMin)<0.1 || abs(pt[1]-shYMax)<0.1) {
+                    fill(255,255,0); textSize(10); textAlign(LEFT,BOTTOM); text("Kesişim", px+5, py-5);
+                }
+            }
         }
 
         if(isDrawingPoly && customPoly.size()>0) {
@@ -525,9 +534,30 @@ public class MainApp extends PApplet {
 
         if(!polys.isEmpty()) {
             PolyObj ap = polys.get(polys.size()-1);
+            float oAlan = ap.getArea(ap.orig);
+            float kAlan = ap.getArea(ap.curr);
+            float fark = Math.abs(oAlan - kAlan);
+            
             fill(255,255,0); textAlign(CENTER, TOP); textSize(14);
-            text("Aktif Log: " + ap.log, width/2f, pY+pH+10);
-            text(String.format(Locale.US, "Orijinal Alan: %.1f  |  Kırpılmış Alan: %.1f", ap.getArea(ap.orig), ap.getArea(ap.curr)), width/2f, pY+pH+30);
+            text("Sutherland-Hodgman Log: " + ap.log, width/2f, pY+pH+10);
+            
+            fill(0,255,0);
+            text(String.format(Locale.US, "Orijinal Alan: %.1f   |   Kırpılmış Alan: %.1f   |   Alan Farkı: %.1f", oAlan, kAlan, fark), width/2f, pY+pH+30);
+
+            if(polyType == 1) {
+                fill(255, 100, 100); textSize(12);
+                text("Konkav poligonlarda Sutherland-Hodgman çalıştırılabilir, fakat köşe sırası ve topoloji yorumu dikkatli yapılmalıdır.", width/2f, pY+pH+50);
+            }
+            
+            // Sağ panel dışı nokta listesi
+            fill(200); textAlign(LEFT, TOP); textSize(13);
+            float ty = pY+10;
+            float listX = rX + 350 + 20;
+            text("Kırpılmış Noktalar:", listX, ty); ty+=25;
+            fill(0,255,0);
+            for(float[] pt:ap.curr) {
+                text(String.format(Locale.US, "(%.2f, %.2f)", pt[0], pt[1]), listX, ty); ty+=20;
+            }
         }
     }
 }
